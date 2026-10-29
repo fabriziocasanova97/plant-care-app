@@ -131,7 +131,7 @@ export default function PlantDetail({ id, go }: { id: number; go: (r: Route) => 
           </form>
         ) : (
           <>
-            <h1>{plant.nickname}</h1>
+            <h1>{plant.nickname}{plant.isSample && <span className="tag test">Test</span>}</h1>
             <button className="icon-btn" onClick={() => setEditing(true)} aria-label="Rename plant"><PencilIcon /></button>
           </>
         )}

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import type { Route } from '../App'
-import { getSetting, setSetting } from '../db'
+import { db, getSetting, setSetting, clearSamplePlants } from '../db'
 import { useWinter } from '../hooks'
 import { dataset } from '../data/ncsu'
+import { loadSamplePlants } from '../samples'
 
 const WINTER_OPTIONS = [25, 50, 100]
 
@@ -10,7 +12,14 @@ export default function Settings(_: { go: (r: Route) => void }) {
   const [key, setKey] = useState('')
   const [hour, setHour] = useState('9')
   const [saved, setSaved] = useState(false)
+  const [loadingSamples, setLoadingSamples] = useState(false)
   const winter = useWinter()
+  const sampleCount = useLiveQuery(() => db.plants.filter((p) => !!p.isSample).count(), [])
+
+  async function addSamples() {
+    setLoadingSamples(true)
+    try { await loadSamplePlants() } finally { setLoadingSamples(false) }
+  }
 
   useEffect(() => {
     getSetting('plantnetKey').then((k) => k && setKey(k))
@@ -27,6 +36,15 @@ export default function Settings(_: { go: (r: Route) => void }) {
   return (
     <div>
       <div className="screen-head"><h1>Settings</h1></div>
+
+      <div className="card">
+        <h3>Try it out</h3>
+        <p className="muted" style={{ marginTop: 0 }}>Three made-up plants with invented dates, notes and photos, each marked “Test”. Removing them never touches your own plants.</p>
+        <div className="row">
+          <button className="btn" onClick={addSamples} disabled={loadingSamples}>{loadingSamples ? 'Adding…' : sampleCount ? 'Reset test plants' : 'Add 3 test plants'}</button>
+          {!!sampleCount && <button className="btn danger" onClick={clearSamplePlants}>Remove test plants</button>}
+        </div>
+      </div>
 
       <div className="card">
         <h3>Winter mode</h3>

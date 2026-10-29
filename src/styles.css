@@ -359,3 +359,9 @@ textarea:focus { border-color: var(--water); outline: none; box-shadow: 0 0 0 3p
   .pulse { animation: none; opacity: 1; }
   .track i, .btn { transition: none; }
 }
+
+/* Test (sample) plants */
+.tag.test { background: var(--amber-soft); color: var(--amber); margin-left: 8px; vertical-align: middle; font-family: var(--body); letter-spacing: 0; }
+.plant-row .tag.test { margin-top: 0; }
+.nudge.test { border-color: var(--amber-soft); }
+.nudge.test strong { color: var(--amber); }

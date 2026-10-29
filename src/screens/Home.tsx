@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, daysUntilDue, isDue, markWatered, effectiveInterval, seasonKey, setSetting, WINTER_MONTHS, type Plant } from '../db'
+import { db, daysUntilDue, isDue, markWatered, effectiveInterval, seasonKey, setSetting, clearSamplePlants, WINTER_MONTHS, type Plant } from '../db'
 import { useWinter } from '../hooks'
 import type { Route } from '../App'
 import { PlantThumb } from '../components/PlantThumb'
@@ -82,6 +82,7 @@ export default function Home({ go }: { go: (r: Route) => void }) {
             <div className="title">
               {p.attention && <FlagIcon className="flag" aria-label="Flagged" />}
               {p.nickname}
+              {p.isSample && <span className="tag test">Test</span>}
             </div>
             <div className="muted sci">{p.identifiedAs?.scientificName ?? 'Not identified'}</div>
             <div className="status-row">
@@ -108,6 +109,12 @@ export default function Home({ go }: { go: (r: Route) => void }) {
         {winter.on && <span className="pill winter" title="Winter mode is on"><SnowIcon /> Winter</span>}
       </div>
       <WinterNudge />
+      {plants.some((p) => p.isSample) && (
+        <div className="nudge test">
+          <div className="grow"><strong>Test plants are loaded.</strong> Look around, then remove them in one tap.</div>
+          <button className="btn small" onClick={clearSamplePlants}>Remove test plants</button>
+        </div>
+      )}
       {due.length === 0 ? (
         <div className="status-line">
           <CheckIcon />

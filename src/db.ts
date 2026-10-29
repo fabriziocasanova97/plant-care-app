@@ -16,6 +16,8 @@ export interface Plant {
   note?: string
   /** She flagged it as needing a closer look. */
   attention?: boolean
+  /** Sample plant loaded from Settings to try the app; removable in one tap. */
+  isSample?: boolean
 }
 
 export interface Watering {
@@ -131,6 +133,16 @@ export async function removePlant(plantId: number) {
     await db.waterings.where('plantId').equals(plantId).delete()
     await db.photos.where('plantId').equals(plantId).delete()
     await db.plants.delete(plantId)
+  })
+}
+
+/** Delete every sample plant with its waterings and photos. Real plants are untouched. */
+export async function clearSamplePlants() {
+  await db.transaction('rw', db.plants, db.waterings, db.photos, async () => {
+    const ids = (await db.plants.filter((p) => !!p.isSample).toArray()).map((p) => p.id!)
+    await db.waterings.where('plantId').anyOf(ids).delete()
+    await db.photos.where('plantId').anyOf(ids).delete()
+    await db.plants.bulkDelete(ids)
   })
 }
 
