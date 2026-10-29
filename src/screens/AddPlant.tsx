@@ -109,6 +109,7 @@ export default function AddPlant({ go }: { go: (r: Route) => void }) {
       lastWateredAt: null,
       createdAt: Date.now(),
     })
+    if (photo) await db.photos.add({ plantId: id as number, blob: photo, at: Date.now() })
     go({ name: 'plant', id: id as number })
   }
 

@@ -66,6 +66,30 @@ export const CheckIcon = (p: SVGProps<SVGSVGElement>) => (
   </svg>
 )
 
+export const SnowIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" />
+  </svg>
+)
+
+export const FlagIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M6 21V4h11l-2.5 4L17 12H6" />
+  </svg>
+)
+
+export const CloseIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+)
+
+export const TrashIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M5 7h14M10 11v6M14 11v6M6.5 7l.8 12h9.4l.8-12M9 7V4.5h6V7" />
+  </svg>
+)
+
 /** A potted sprout for empty states. */
 export const SproutArt = (p: SVGProps<SVGSVGElement>) => (
   <svg width="120" height="120" viewBox="0 0 120 120" fill="none" aria-hidden="true" {...p}>

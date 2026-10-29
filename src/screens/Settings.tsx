@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
 import type { Route } from '../App'
 import { getSetting, setSetting } from '../db'
+import { useWinter } from '../hooks'
 import { dataset } from '../data/ncsu'
+
+const WINTER_OPTIONS = [25, 50, 100]
 
 export default function Settings(_: { go: (r: Route) => void }) {
   const [key, setKey] = useState('')
   const [hour, setHour] = useState('9')
   const [saved, setSaved] = useState(false)
+  const winter = useWinter()
 
   useEffect(() => {
     getSetting('plantnetKey').then((k) => k && setKey(k))
@@ -23,6 +27,33 @@ export default function Settings(_: { go: (r: Route) => void }) {
   return (
     <div>
       <div className="screen-head"><h1>Settings</h1></div>
+
+      <div className="card">
+        <h3>Winter mode</h3>
+        <label className="switch-row">
+          <span>
+            <strong>Water less often</strong>
+            <small>Every watering interval gets longer while this is on.</small>
+          </span>
+          <input type="checkbox" role="switch" checked={winter.on} onChange={(e) => setSetting('winterMode', e.target.checked ? '1' : '0')} />
+          <i aria-hidden="true" />
+        </label>
+        {winter.on && (
+          <div className="field">
+            <span>How much longer</span>
+            <div className="chips" role="radiogroup" aria-label="How much longer">
+              {WINTER_OPTIONS.map((pct) => (
+                <button key={pct} type="button" role="radio" aria-checked={winter.extra === pct}
+                  className={`chip ${winter.extra === pct ? 'on' : ''}`} onClick={() => setSetting('winterExtra', String(pct))}>
+                  +{pct}%
+                </button>
+              ))}
+            </div>
+            <p className="muted">So every 7 days becomes every {Math.round(7 * (1 + winter.extra / 100))} days.</p>
+          </div>
+        )}
+      </div>
+
       <div className="card">
         <h3>Photo identification</h3>
         <label className="field">
@@ -46,7 +77,7 @@ export default function Settings(_: { go: (r: Route) => void }) {
         <h3>Where the information comes from</h3>
         <p>Plant care notes are copied word for word from the <a href={dataset.sourceUrl} target="_blank" rel="noreferrer">{dataset.source}</a> ({dataset.plants.length} houseplant profiles, copied {new Date(dataset.fetchedAt).toLocaleDateString()}). Every plant page links to its source.</p>
         <p>Photo identification is by <a href="https://plantnet.org" target="_blank" rel="noreferrer">Pl@ntNet</a>.</p>
-        <p>Watering intervals are yours to set; neither source prescribes a schedule.</p>
+        <p>Watering intervals and winter mode are yours to set; neither source prescribes a schedule.</p>
       </div>
 
       <div className="card quiet">

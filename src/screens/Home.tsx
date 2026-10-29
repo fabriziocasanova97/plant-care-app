@@ -1,11 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, daysUntilDue, isDue, markWatered, type Plant } from '../db'
+import { db, daysUntilDue, isDue, markWatered, effectiveInterval, seasonKey, setSetting, WINTER_MONTHS, type Plant } from '../db'
+import { useWinter } from '../hooks'
 import type { Route } from '../App'
 import { PlantThumb } from '../components/PlantThumb'
-import { DropIcon, CheckIcon, SproutArt } from '../components/Icons'
+import { DropIcon, CheckIcon, SproutArt, SnowIcon, FlagIcon, CloseIcon } from '../components/Icons'
 
-export function dueLabel(p: Plant): { text: string; cls: 'ok' | 'soon' | 'due' } {
-  const d = daysUntilDue(p)
+export function dueLabel(p: Plant, winterFactor = 0): { text: string; cls: 'ok' | 'soon' | 'due' } {
+  const d = daysUntilDue(p, winterFactor)
   if (d === null) return { text: 'Not watered yet', cls: 'due' }
   if (d < 0) return { text: `${-d} day${d === -1 ? '' : 's'} overdue`, cls: 'due' }
   if (d === 0) return { text: 'Water today', cls: 'due' }
@@ -14,19 +15,47 @@ export function dueLabel(p: Plant): { text: string; cls: 'ok' | 'soon' | 'due' }
 }
 
 /** How much of the watering interval is left, 0–1 (null when never watered). */
-function remainingFraction(p: Plant): number | null {
-  const d = daysUntilDue(p)
+function remainingFraction(p: Plant, winterFactor: number): number | null {
+  const d = daysUntilDue(p, winterFactor)
   if (d === null) return null
-  return Math.max(0, Math.min(1, d / Math.max(1, p.intervalDays)))
+  return Math.max(0, Math.min(1, d / effectiveInterval(p, winterFactor)))
+}
+
+/** A once-per-season nudge: turn winter mode on in Nov–Feb, off in the growing season. */
+function WinterNudge() {
+  const winter = useWinter()
+  const season = seasonKey()
+  // '' = never dismissed; undefined = still loading (a missing row must not read as "loading" forever).
+  const dismissed = useLiveQuery(() => db.settings.get('winterNudge').then((r) => r?.value ?? ''), [])
+  if (dismissed === undefined || dismissed === season) return null
+  const isWinter = WINTER_MONTHS.has(new Date().getMonth())
+  if (isWinter === winter.on) return null
+  const dismiss = () => setSetting('winterNudge', season)
+  // The button does the thing right here; Settings is still where she can fine-tune it.
+  const toggle = async () => { await setSetting('winterMode', isWinter ? '1' : '0'); dismiss() }
+  return (
+    <div className="nudge">
+      <SnowIcon />
+      <div className="grow">
+        {isWinter
+          ? <><strong>Winter is here.</strong> Winter mode stretches every watering interval.</>
+          : <><strong>Days are longer again.</strong> Winter mode is still on.</>}
+      </div>
+      <button className="btn small" onClick={toggle}>{isWinter ? 'Turn on' : 'Turn off'}</button>
+      <button className="icon-btn" onClick={dismiss} aria-label="Not now"><CloseIcon /></button>
+    </div>
+  )
 }
 
 export default function Home({ go }: { go: (r: Route) => void }) {
   const plants = useLiveQuery(() => db.plants.toArray(), [])
-  if (!plants) return null
+  const winter = useWinter()
+  if (!plants || !winter.loaded) return null
+  const f = winter.factor
 
-  const sorted = [...plants].sort((a, b) => (daysUntilDue(a) ?? -999) - (daysUntilDue(b) ?? -999))
-  const due = sorted.filter((p) => isDue(p))
-  const later = sorted.filter((p) => !isDue(p))
+  const sorted = [...plants].sort((a, b) => (daysUntilDue(a, f) ?? -999) - (daysUntilDue(b, f) ?? -999))
+  const due = sorted.filter((p) => isDue(p, f))
+  const later = sorted.filter((p) => !isDue(p, f))
 
   if (plants.length === 0) {
     return (
@@ -43,14 +72,17 @@ export default function Home({ go }: { go: (r: Route) => void }) {
   }
 
   const Row = ({ p }: { p: Plant }) => {
-    const label = dueLabel(p)
-    const left = remainingFraction(p)
+    const label = dueLabel(p, f)
+    const left = remainingFraction(p, f)
     return (
       <div className="card plant-card">
         <button className="plant-row" onClick={() => go({ name: 'plant', id: p.id! })}>
           <PlantThumb photo={p.photo} />
           <div className="grow">
-            <div className="title">{p.nickname}</div>
+            <div className="title">
+              {p.attention && <FlagIcon className="flag" aria-label="Flagged" />}
+              {p.nickname}
+            </div>
             <div className="muted sci">{p.identifiedAs?.scientificName ?? 'Not identified'}</div>
             <div className="status-row">
               <div className={`track ${label.cls}`} aria-hidden="true">
@@ -71,7 +103,11 @@ export default function Home({ go }: { go: (r: Route) => void }) {
 
   return (
     <div>
-      <div className="screen-head"><h1>My plants</h1></div>
+      <div className="screen-head">
+        <h1>My plants</h1>
+        {winter.on && <span className="pill winter" title="Winter mode is on"><SnowIcon /> Winter</span>}
+      </div>
+      <WinterNudge />
       {due.length === 0 ? (
         <div className="status-line">
           <CheckIcon />

@@ -266,6 +266,89 @@ input:focus, select:focus { border-color: var(--water); outline: none; box-shado
 .tabbar button.active { color: var(--green); }
 .tabbar button.active svg { stroke-width: 2.2; }
 
+/* Winter mode */
+.pill.winter { display: inline-flex; align-items: center; gap: 4px; background: var(--water-soft); color: var(--water); }
+.pill.winter svg { width: 14px; height: 14px; }
+/* Seasonal nudge: a quiet card, so it never competes with the blue/green status line below it. */
+.nudge {
+  display: flex; align-items: center; gap: 10px; padding: 10px 6px 10px 14px; margin: 0 0 10px;
+  border-radius: var(--radius); background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow);
+  font-size: 0.92rem; line-height: 1.4;
+}
+.nudge > svg { flex: none; width: 22px; height: 22px; color: var(--water); }
+.nudge .btn { flex: none; }
+.nudge .icon-btn { color: var(--muted); width: 40px; height: 40px; margin-left: -4px; }
+.winter-note { display: flex; align-items: center; gap: 6px; margin: -4px 0 0; }
+.winter-note svg { width: 16px; height: 16px; flex: none; color: var(--water); }
+
+/* Switch rows (winter mode, keep-an-eye flag) */
+.switch-row { display: flex; align-items: center; gap: 12px; min-height: 48px; cursor: pointer; position: relative; }
+.switch-row > span { flex: 1; min-width: 0; }
+.switch-row strong { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.switch-row small { display: block; color: var(--muted); font-size: 0.85rem; line-height: 1.4; margin-top: 2px; }
+.switch-row input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch-row i {
+  flex: none; width: 50px; height: 30px; border-radius: 999px; background: var(--line-strong); position: relative; transition: background 0.2s;
+}
+.switch-row i::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 999px; background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); transition: transform 0.2s;
+}
+.switch-row input:checked + i { background: var(--green); }
+.switch-row input:checked + i::after { transform: translateX(20px); }
+.switch-row input:focus-visible + i { outline: 2px solid var(--water); outline-offset: 2px; }
+svg.inline { width: 18px; height: 18px; }
+svg.flag { width: 16px; height: 16px; vertical-align: -2px; margin-right: 4px; color: var(--amber); }
+
+.chips { display: flex; gap: 8px; }
+.chip {
+  flex: 1; min-height: 44px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--card);
+  font-weight: 600; cursor: pointer;
+}
+.chip:active { background: var(--green-soft); }
+.chip.on { background: var(--green); color: var(--on-green); border-color: var(--green); }
+.chip.on:active { background: var(--green-deep); }
+div.field { margin: 12px 0 0; }
+div.field > span { display: block; font-size: 0.88rem; color: var(--muted); margin-bottom: 6px; }
+
+textarea {
+  width: 100%; min-height: 72px; padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid var(--line-strong);
+  background: var(--card); color: var(--ink); font-size: 1rem; font-family: inherit; line-height: 1.45; resize: vertical; -webkit-appearance: none;
+}
+textarea:focus { border-color: var(--water); outline: none; box-shadow: 0 0 0 3px var(--water-soft); }
+
+/* Photo timeline: the main photo opens the viewer; the strip bleeds to the screen edges like a native gallery. */
+.photo-open { display: block; width: 100%; padding: 0; border: 0; background: none; border-radius: var(--radius); cursor: pointer; }
+.photo-open:active { opacity: 0.9; }
+.photo-strip {
+  display: flex; gap: 10px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 8px;
+  scroll-snap-type: x proximity; scroll-padding: 16px; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.photo-strip::-webkit-scrollbar { display: none; }
+.photo-tile {
+  flex: none; width: 104px; padding: 0; border: 0; background: none; cursor: pointer; scroll-snap-align: start; text-align: center;
+}
+.photo-tile img { width: 104px; height: 104px; object-fit: cover; border-radius: 14px; display: block; background: var(--green-soft); }
+.photo-tile:active img { opacity: 0.9; }
+.photo-tile span { display: block; font-size: 0.78rem; color: var(--muted); margin-top: 4px; font-weight: 600; }
+.viewer {
+  position: fixed; inset: 0; z-index: 20; background: rgba(12, 18, 13, 0.96); color: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 16px;
+  padding-top: calc(64px + env(safe-area-inset-top)); padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  overscroll-behavior: contain;
+}
+.viewer-bar {
+  position: absolute; top: env(safe-area-inset-top); left: 0; right: 0; display: flex; align-items: center;
+  justify-content: space-between; padding: 6px 8px 6px 16px;
+}
+.viewer-bar > span { display: grid; line-height: 1.25; }
+.viewer-bar strong { font-family: var(--display); font-weight: 700; }
+.viewer-bar small { font-size: 0.82rem; opacity: 0.7; }
+.viewer-bar .icon-btn { color: #fff; }
+.viewer-bar .icon-btn:active { background: rgba(255, 255, 255, 0.15); }
+.viewer img { max-width: 100%; max-height: 66vh; border-radius: 14px; object-fit: contain; }
+.viewer .btn.danger { color: #ffb4a3; }
+
 /* Empty states */
 .empty { text-align: center; padding: 32px 10px 20px; color: var(--muted); }
 .empty h2 { color: var(--ink); margin: 12px 0 4px; font-size: 1.25rem; }
