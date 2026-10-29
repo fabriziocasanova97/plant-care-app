@@ -1,11 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, daysUntilDue, markWatered, type Plant } from '../db'
+import { db, daysUntilDue, isDue, markWatered, type Plant } from '../db'
 import type { Route } from '../App'
 import { PlantThumb } from '../components/PlantThumb'
 
 export function dueLabel(p: Plant): { text: string; cls: 'ok' | 'soon' | 'due' } {
   const d = daysUntilDue(p)
-  if (d === null) return { text: 'Not watered yet', cls: 'soon' }
+  if (d === null) return { text: 'Not watered yet', cls: 'due' }
   if (d < 0) return { text: `${-d} day${d === -1 ? '' : 's'} overdue`, cls: 'due' }
   if (d === 0) return { text: 'Water today', cls: 'due' }
   if (d === 1) return { text: 'Tomorrow', cls: 'soon' }
@@ -17,8 +17,8 @@ export default function Home({ go }: { go: (r: Route) => void }) {
   if (!plants) return null
 
   const sorted = [...plants].sort((a, b) => (daysUntilDue(a) ?? -999) - (daysUntilDue(b) ?? -999))
-  const due = sorted.filter((p) => (daysUntilDue(p) ?? 0) <= 0)
-  const later = sorted.filter((p) => (daysUntilDue(p) ?? 0) > 0)
+  const due = sorted.filter((p) => isDue(p))
+  const later = sorted.filter((p) => !isDue(p))
 
   if (plants.length === 0) {
     return (

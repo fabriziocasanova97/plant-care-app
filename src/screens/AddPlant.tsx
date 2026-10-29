@@ -26,7 +26,7 @@ export default function AddPlant({ go }: { go: (r: Route) => void }) {
   const [ncsu, setNcsu] = useState<ReturnType<typeof findByScientificName>>(null)
   const [manualQuery, setManualQuery] = useState('')
   const [nickname, setNickname] = useState('')
-  const [interval, setInterval] = useState(7)
+  const [days, setDays] = useState(7)
   const fileInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => { getSetting('plantnetKey').then(setApiKey) }, [])
@@ -34,7 +34,13 @@ export default function AddPlant({ go }: { go: (r: Route) => void }) {
   async function onFile(file: File | undefined) {
     if (!file) return
     setError(null)
-    const small = await shrinkImage(file)
+    let small: Blob
+    try {
+      small = await shrinkImage(file)
+    } catch (e) {
+      setError(`Could not read that photo (${(e as Error).message}). Try taking it again.`)
+      return
+    }
     setPhoto(small)
     if (!apiKey) {
       setError('No Pl@ntNet API key yet. Add it in Settings, or pick the plant by name below.')
@@ -74,7 +80,7 @@ export default function AddPlant({ go }: { go: (r: Route) => void }) {
       ncsuSlug: ncsu?.plant.slug ?? null,
       identifiedAs: chosen,
       photo,
-      intervalDays: interval,
+      intervalDays: days,
       lastWateredAt: null,
       createdAt: Date.now(),
     })
@@ -116,10 +122,10 @@ export default function AddPlant({ go }: { go: (r: Route) => void }) {
             <>
               <h2>Which one is it?</h2>
               <p className="muted">Matches from Pl@ntNet, most likely first. Below 30% is a guess.</p>
-              {candidates.map((c) => {
+              {candidates.map((c, i) => {
                 const inNcsu = findByScientificName(c.scientificName)
                 return (
-                  <button key={c.scientificName} className="candidate" onClick={() => choose(c)}>
+                  <button key={i} className="candidate" onClick={() => choose(c)}>
                     <span className={`score ${c.score < 0.3 ? 'low' : ''}`}>{Math.round(c.score * 100)}%</span>
                     <span className="grow">
                       <div className="title">{c.commonNames[0] ?? c.scientificName}</div>
@@ -155,9 +161,9 @@ export default function AddPlant({ go }: { go: (r: Route) => void }) {
           <label className="field">
             <span>Water every</span>
             <div className="stepper">
-              <button onClick={() => setInterval((d) => Math.max(1, d - 1))}>−</button>
-              <strong>{interval} day{interval === 1 ? '' : 's'}</strong>
-              <button onClick={() => setInterval((d) => Math.min(60, d + 1))}>+</button>
+              <button onClick={() => setDays((d) => Math.max(1, d - 1))}>−</button>
+              <strong>{days} day{days === 1 ? '' : 's'}</strong>
+              <button onClick={() => setDays((d) => Math.min(60, d + 1))}>+</button>
             </div>
           </label>
           <p className="muted">This interval is your choice; NC State describes conditions rather than a schedule. Read the care notes below and adjust it any time.</p>

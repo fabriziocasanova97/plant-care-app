@@ -2,6 +2,7 @@
 // (https://plants.ces.ncsu.edu) and writes the facts, verbatim, to src/data/ncsu-houseplants.json.
 //
 // Nothing here is written by hand: every field is copied from the profile page it links to.
+// Only the sections the app shows are kept, so the bundle stays small.
 // Run: node scripts/fetch-ncsu.mjs
 import { load } from 'cheerio'
 import { mkdir, writeFile } from 'node:fs/promises'
@@ -10,6 +11,19 @@ const BASE = 'https://plants.ces.ncsu.edu'
 const LIST = `${BASE}/find_a_plant/?tag=houseplant`
 const OUT = new URL('../src/data/ncsu-houseplants.json', import.meta.url)
 const DELAY_MS = 700 // be polite to a volunteer-run site
+
+// Attribute groups / keys the app displays (see src/data/ncsu.ts). Everything else is dropped.
+const KEEP_GROUPS = new Set(['Cultural Conditions', 'Whole Plant Traits', 'Poisonous to Humans'])
+const KEEP_KEYS = new Set([
+  'Attributes » Family',
+  'Attributes » Country Or Region Of Origin',
+  'Attributes » Dimensions',
+  'Attributes » Recommended Propagation Strategy',
+  'Attributes » Particularly Resistant To (Insects/Diseases/Other Problems)',
+  'Landscape » Problems',
+  'Landscape » Resistance To Challenges',
+])
+const keep = (group, key) => KEEP_GROUPS.has(group) || KEEP_KEYS.has(key) || /^General » .* has some .*problems$/.test(key)
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const clean = (s) => s.replace(/\s+/g, ' ').trim()
@@ -54,7 +68,19 @@ function parseProfile(slug, html) {
     }
   })
 
-  // Every <dt>/<dd> pair on the page, grouped by its section heading ("Cultural Conditions", "Leaves", ...).
+  // NC State lists common names alphabetically. Its photo captions ("Chlorophytum comosum, Spider Plant, ...")
+  // use the name the editors lead with, so the common name that appears most in captions is the headline one.
+  const captions = $('[data-caption]').map((_, el) => $(el).attr('data-caption').toLowerCase()).get()
+  let preferredCommonName = null
+  let best = 0
+  for (const name of commonNames) {
+    // Skip names that are part of the Latin name (e.g. "Chlorophytum"): every caption contains those.
+    if (scientificName.toLowerCase().includes(name.toLowerCase())) continue
+    const n = captions.filter((c) => c.includes(name.toLowerCase())).length
+    if (n > best) { best = n; preferredCommonName = name }
+  }
+
+  // <dt>/<dd> pairs, grouped by section heading ("Cultural Conditions", "Leaves", ...).
   const attributes = {}
   $('dl').each((_, dl) => {
     const group = clean($(dl).find('.group_name').first().text()).replace(/:$/, '') || 'General'
@@ -76,15 +102,18 @@ function parseProfile(slug, html) {
     })
   })
 
-  const description = attributes['General » Description'] ?? []
-  delete attributes['General » Description']
+  const description = (attributes['General » Description'] ?? []).filter((d) => !/^VIDEO Created by/i.test(d))
+  for (const key of Object.keys(attributes)) {
+    if (!keep(key.split(' » ')[0], key)) delete attributes[key]
+  }
 
   const tags = new Set()
   $('a[href^="/find_a_plant/?tag="]').each((_, a) => {
-    tags.add(decodeURIComponent($(a).attr('href').split('tag=')[1]))
+    const t = decodeURIComponent($(a).attr('href').split('tag=')[1])
+    if (/toxic|poison/.test(t)) tags.add(t)
   })
 
-  return { slug, url, scientificName, commonNames, previouslyKnownAs, description, attributes, tags: [...tags] }
+  return { slug, url, scientificName, commonNames, preferredCommonName, previouslyKnownAs, description, attributes, tags: [...tags] }
 }
 
 const slugs = await listSlugs()
@@ -106,5 +135,5 @@ await writeFile(OUT, JSON.stringify({
   sourceUrl: LIST,
   fetchedAt: new Date().toISOString(),
   plants,
-}, null, 1))
+}))
 process.stdout.write(`wrote ${plants.length} plants\n`)

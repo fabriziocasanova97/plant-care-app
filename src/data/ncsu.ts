@@ -5,6 +5,8 @@ export interface NcsuPlant {
   url: string
   scientificName: string
   commonNames: string[]
+  /** The common name NC State leads with in its photo captions, when one could be determined. */
+  preferredCommonName: string | null
   previouslyKnownAs: string[]
   description: string[]
   /** "Group » Label" -> values, exactly as printed on the profile page. */
@@ -36,23 +38,34 @@ export function getPlant(slug: string): NcsuPlant | undefined {
 export function findByScientificName(name: string): { plant: NcsuPlant; match: 'species' | 'synonym' | 'cultivar' | 'genus' } | null {
   const n = norm(name)
   if (!n) return null
-  const genus = n.split(' ')[0]
-  const species = n.split(' ').slice(0, 2).join(' ')
+  const words = n.split(' ')
+  const genus = words[0]
 
   for (const p of dataset.plants) if (norm(p.scientificName) === n) return { plant: p, match: 'species' }
   for (const p of dataset.plants) if (p.previouslyKnownAs.some((s) => norm(s) === n)) return { plant: p, match: 'synonym' }
-  for (const p of dataset.plants) if (norm(p.scientificName).startsWith(species + ' ') || norm(p.scientificName) === species) return { plant: p, match: 'cultivar' }
+  if (words.length >= 2) {
+    // "Genus species" given: a cultivar/variety profile of that species counts as a near match.
+    const species = words.slice(0, 2).join(' ')
+    for (const p of dataset.plants) if (norm(p.scientificName).startsWith(species + ' ')) return { plant: p, match: 'cultivar' }
+  }
+  // Only a genus-level profile (e.g. "Ficus") is an acceptable genus match, never an arbitrary species of it.
   for (const p of dataset.plants) if (norm(p.scientificName) === genus) return { plant: p, match: 'genus' }
   return null
 }
 
-/** The common name to show: the one matching the query if any, otherwise the first one that isn't just a Latin synonym. */
+/**
+ * The common name to show: the one matching the query if any, else the name NC State leads with
+ * in its captions, else the first common name that isn't a Latin synonym.
+ */
 export function displayName(p: NcsuPlant, query = ''): string {
   const q = norm(query)
   const hit = q && p.commonNames.find((c) => norm(c).includes(q))
   if (hit) return hit
-  const genus = norm(p.scientificName).split(' ')[0]
-  return p.commonNames.find((c) => !norm(c).startsWith(genus) && !/^[a-z]+ [a-z]+$/.test(norm(c)) ) ?? p.commonNames[0] ?? p.scientificName
+  const latin = norm(p.scientificName)
+  const genus = latin.split(' ')[0]
+  if (p.preferredCommonName && !latin.includes(norm(p.preferredCommonName))) return p.preferredCommonName
+  const synonyms = new Set(p.previouslyKnownAs.map(norm))
+  return p.commonNames.find((c) => !norm(c).startsWith(genus) && !synonyms.has(norm(c))) ?? p.commonNames[0] ?? p.scientificName
 }
 
 export function searchPlants(query: string, limit = 20): NcsuPlant[] {
@@ -102,19 +115,22 @@ export function pestAttributes(p: NcsuPlant): [string, string[]][] {
     .map(([k, v]) => [k.replace(/^General » .* has some /, '').replace(/^(.)/, (c) => c.toUpperCase()), v])
 }
 
-/** Description paragraphs, minus the course-video credit line. */
+const CARE_WORDS = /\b(water(s|ed|ing)?|moist(ure)?|dry|dries|drought|humid(ity)?|light|sun(light|ny)?|shade|fertiliz\w*|temperature|degrees|mist(ing)?)\b/i
+const splitSentences = (text: string) => text.split(/(?<=[.!?])\s+(?=[A-Z•])/)
+
+/** Sentences in the description that talk about water, light, humidity, temperature or fertilizer. */
+export function careSentences(p: NcsuPlant): string[] {
+  return p.description.flatMap(splitSentences).filter((s) => CARE_WORDS.test(s))
+}
+
+/** Description paragraphs with the care sentences removed, so nothing is shown twice. */
 export function descriptionParagraphs(p: NcsuPlant): string[] {
-  return p.description.filter((d) => !/^VIDEO Created by/i.test(d))
+  return p.description
+    .map((d) => splitSentences(d).filter((s) => !CARE_WORDS.test(s)).join(' '))
+    .filter((d) => d.length > 0)
 }
 
 export function toxicityTags(p: NcsuPlant): string[] {
   return p.tags.filter((t) => /toxic|poison/.test(t)).map((t) => '#' + t.replace(/-/g, ' '))
 }
 
-/** Sentences in the description that talk about water, light, humidity, or fertilizer. */
-export function careSentences(p: NcsuPlant): string[] {
-  return p.description
-    .join(' ')
-    .split(/(?<=[.!?])\s+/)
-    .filter((s) => /water|moist|dry|drought|humid|light|sun|shade|fertiliz|temperature|degrees|mist/i.test(s))
-}

@@ -42,11 +42,17 @@ export function nextDue(p: Plant): number | null {
   return p.lastWateredAt === null ? null : p.lastWateredAt + p.intervalDays * DAY
 }
 
-/** Whole days until due; negative means overdue, null means never watered. */
+/** Whole days until due (calendar days, so a 1-hour DST shift doesn't matter); negative means overdue, null means never watered. */
 export function daysUntilDue(p: Plant, now = Date.now()): number | null {
   const due = nextDue(p)
   if (due === null) return null
-  return Math.ceil((due - startOfDay(now)) / DAY) - 1
+  return Math.round((startOfDay(due) - startOfDay(now)) / DAY)
+}
+
+/** Needs attention today: overdue, due today, or never watered. */
+export function isDue(p: Plant, now = Date.now()): boolean {
+  const d = daysUntilDue(p, now)
+  return d === null || d <= 0
 }
 
 export function startOfDay(t: number): number {

@@ -6,7 +6,7 @@ import { getPlant } from '../data/ncsu'
 import { CareInfo } from '../components/CareInfo'
 import { PlantThumb } from '../components/PlantThumb'
 import { dueLabel } from './Home'
-import { wateringEvent, downloadIcs } from '../ics'
+import { wateringEvent, deliverIcs } from '../ics'
 import { shrinkImage } from '../plantnet'
 
 export default function PlantDetail({ id, go }: { id: number; go: (r: Route) => void }) {
@@ -15,6 +15,7 @@ export default function PlantDetail({ id, go }: { id: number; go: (r: Route) => 
   const [hour, setHour] = useState(9)
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState('')
+  const [calendarNote, setCalendarNote] = useState<string | null>(null)
 
   useEffect(() => { getSetting('reminderHour').then((h) => h && setHour(Number(h))) }, [])
   useEffect(() => { if (plant) setName(plant.nickname) }, [plant?.nickname])
@@ -23,7 +24,7 @@ export default function PlantDetail({ id, go }: { id: number; go: (r: Route) => 
   const ncsu = plant.ncsuSlug ? getPlant(plant.ncsuSlug) : undefined
   const label = dueLabel(plant)
 
-  async function setInterval(d: number) {
+  async function updateInterval(d: number) {
     await db.plants.update(id, { intervalDays: Math.min(60, Math.max(1, d)) })
   }
   async function remove() {
@@ -34,9 +35,13 @@ export default function PlantDetail({ id, go }: { id: number; go: (r: Route) => 
     })
     go({ name: 'home' })
   }
-  function addToCalendar() {
+  async function addToCalendar() {
     const first = nextDue(plant!) ?? startOfDay(Date.now())
-    downloadIcs(`water-${plant!.nickname.replace(/\W+/g, '-').toLowerCase()}.ics`, wateringEvent(plant!, Math.max(first, startOfDay(Date.now())), hour))
+    const body = wateringEvent(plant!, Math.max(first, startOfDay(Date.now())), hour)
+    const how = await deliverIcs(`water-${plant!.nickname.replace(/\W+/g, '-').toLowerCase()}.ics`, body)
+    setCalendarNote(how === 'shared'
+      ? 'In the share sheet, choose Calendar (or “Add to Calendar”).'
+      : 'Open the downloaded .ics file to add it to your calendar.')
   }
   async function newPhoto(file: File | undefined) {
     if (!file) return
@@ -71,13 +76,14 @@ export default function PlantDetail({ id, go }: { id: number; go: (r: Route) => 
         <label className="field">
           <span>Water every</span>
           <div className="stepper">
-            <button onClick={() => setInterval(plant.intervalDays - 1)}>−</button>
+            <button onClick={() => updateInterval(plant.intervalDays - 1)}>−</button>
             <strong>{plant.intervalDays} day{plant.intervalDays === 1 ? '' : 's'}</strong>
-            <button onClick={() => setInterval(plant.intervalDays + 1)}>+</button>
+            <button onClick={() => updateInterval(plant.intervalDays + 1)}>+</button>
           </div>
         </label>
         <button className="btn block" onClick={addToCalendar}>📅 Add reminder to Calendar</button>
-        <p className="muted">Creates a repeating “Water {plant.nickname}” event with an alert at {hour}:00. Re-add it if you change the interval.</p>
+        {calendarNote && <p className="notice ok">{calendarNote}</p>}
+        <p className="muted">Creates a repeating “Water {plant.nickname}” event with an alert at {hour}:00. Add it again after changing the interval; the old one is replaced.</p>
       </div>
 
       {ncsu ? (

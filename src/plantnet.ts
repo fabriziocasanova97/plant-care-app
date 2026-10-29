@@ -33,9 +33,15 @@ export async function identify(image: Blob, apiKey: string): Promise<{ candidate
   }
 }
 
-/** Downscale a photo so uploads are quick on mobile data. */
+/** Downscale a photo so uploads are quick on mobile data. Falls back to the original if the browser can't decode it. */
 export async function shrinkImage(file: Blob, maxSide = 1280): Promise<Blob> {
-  const bitmap = await createImageBitmap(file)
+  let bitmap: ImageBitmap
+  try {
+    // 'from-image' applies the EXIF rotation so portrait phone photos aren't stored sideways.
+    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+  } catch {
+    return file
+  }
   const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height))
   const canvas = document.createElement('canvas')
   canvas.width = Math.round(bitmap.width * scale)
