@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { LeafIcon } from './Icons'
 
 export function PlantThumb({ photo, big = false }: { photo: Blob | null; big?: boolean }) {
   const [url, setUrl] = useState<string | null>(null)
@@ -9,5 +10,5 @@ export function PlantThumb({ photo, big = false }: { photo: Blob | null; big?: b
     return () => URL.revokeObjectURL(u)
   }, [photo])
   const cls = `thumb${big ? ' big' : ''}`
-  return url ? <img className={cls} src={url} alt="" /> : <div className={cls}>🌿</div>
+  return url ? <img className={cls} src={url} alt="" /> : <div className={cls}><LeafIcon /></div>
 }

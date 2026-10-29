@@ -5,6 +5,7 @@ import Home from './screens/Home'
 import AddPlant from './screens/AddPlant'
 import PlantDetail from './screens/PlantDetail'
 import Settings from './screens/Settings'
+import { LeafIcon, CameraIcon, GearIcon } from './components/Icons'
 
 export type Route = { name: 'home' } | { name: 'add' } | { name: 'plant'; id: number } | { name: 'settings' }
 
@@ -44,15 +45,15 @@ export default function App() {
       {route.name === 'add' && <AddPlant go={go} />}
       {route.name === 'plant' && <PlantDetail id={route.id} go={go} />}
       {route.name === 'settings' && <Settings go={go} />}
-      <nav className="tabbar">
-        <button className={route.name === 'home' ? 'active' : ''} onClick={() => go({ name: 'home' })}>
-          <span>🪴</span>My plants
+      <nav className="tabbar" aria-label="Main">
+        <button className={route.name === 'home' || route.name === 'plant' ? 'active' : ''} aria-current={route.name === 'home' ? 'page' : undefined} onClick={() => go({ name: 'home' })}>
+          <LeafIcon />My plants
         </button>
-        <button className={route.name === 'add' ? 'active' : ''} onClick={() => go({ name: 'add' })}>
-          <span>📷</span>Scan
+        <button className={route.name === 'add' ? 'active' : ''} aria-current={route.name === 'add' ? 'page' : undefined} onClick={() => go({ name: 'add' })}>
+          <CameraIcon />Scan
         </button>
-        <button className={route.name === 'settings' ? 'active' : ''} onClick={() => go({ name: 'settings' })}>
-          <span>⚙️</span>Settings
+        <button className={route.name === 'settings' ? 'active' : ''} aria-current={route.name === 'settings' ? 'page' : undefined} onClick={() => go({ name: 'settings' })}>
+          <GearIcon />Settings
         </button>
       </nav>
     </div>

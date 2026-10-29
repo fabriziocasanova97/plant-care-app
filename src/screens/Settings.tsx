@@ -22,13 +22,15 @@ export default function Settings(_: { go: (r: Route) => void }) {
 
   return (
     <div>
-      <h1>Settings</h1>
+      <div className="screen-head"><h1>Settings</h1></div>
       <div className="card">
+        <h3>Photo identification</h3>
         <label className="field">
-          <span>Pl@ntNet API key (for photo identification)</span>
+          <span>Pl@ntNet API key</span>
           <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="Paste key" autoCapitalize="off" autoCorrect="off" />
         </label>
         <p className="muted">Free at <a href="https://my.plantnet.org" target="_blank" rel="noreferrer">my.plantnet.org</a> (500 identifications a day). The key stays on this phone.</p>
+        <h3>Reminders</h3>
         <label className="field">
           <span>Calendar reminder time</span>
           <select value={hour} onChange={(e) => setHour(e.target.value)}>
@@ -37,20 +39,20 @@ export default function Settings(_: { go: (r: Route) => void }) {
             ))}
           </select>
         </label>
-        <button className="btn primary block" onClick={save}>{saved ? 'Saved ✓' : 'Save'}</button>
+        <button className="btn primary block" onClick={save}>{saved ? 'Saved' : 'Save settings'}</button>
       </div>
 
-      <div className="card">
-        <h3 style={{ marginTop: 0 }}>Where the information comes from</h3>
+      <div className="card quiet">
+        <h3>Where the information comes from</h3>
         <p>Plant care notes are copied word for word from the <a href={dataset.sourceUrl} target="_blank" rel="noreferrer">{dataset.source}</a> ({dataset.plants.length} houseplant profiles, copied {new Date(dataset.fetchedAt).toLocaleDateString()}). Every plant page links to its source.</p>
         <p>Photo identification is by <a href="https://plantnet.org" target="_blank" rel="noreferrer">Pl@ntNet</a>.</p>
         <p>Watering intervals are yours to set; neither source prescribes a schedule.</p>
       </div>
 
-      <div className="card">
-        <h3 style={{ marginTop: 0 }}>Install on your phone</h3>
-        <p><b>iPhone:</b> in Safari tap Share → “Add to Home Screen”.</p>
-        <p><b>Android:</b> in Chrome tap ⋮ → “Add to Home screen”.</p>
+      <div className="card quiet">
+        <h3>Install on your phone</h3>
+        <p><b>iPhone:</b> in Safari tap Share, then “Add to Home Screen”.</p>
+        <p><b>Android:</b> in Chrome open the menu, then “Add to Home screen”.</p>
         <p className="muted">All your plants and photos are stored on this phone only.</p>
       </div>
     </div>

@@ -7,9 +7,11 @@ export function CareInfo({ plant, matchNote }: { plant: NcsuPlant; matchNote?: s
   const tox = toxicityTags(plant)
   return (
     <div className="card">
-      <div className="title">{plant.scientificName}</div>
-      {plant.commonNames.length > 0 && <div className="muted">{plant.commonNames.join(' · ')}</div>}
-      {matchNote && <p className="notice" style={{ marginTop: 10 }}>{matchNote}</p>}
+      <div className="care-head">
+        <div className="title sci">{plant.scientificName}</div>
+        {plant.commonNames.length > 0 && <div className="muted">{plant.commonNames.join(', ')}</div>}
+      </div>
+      {matchNote && <p className="notice mt">{matchNote}</p>}
 
       {tips.length > 0 && (
         <>
@@ -22,7 +24,7 @@ export function CareInfo({ plant, matchNote }: { plant: NcsuPlant; matchNote?: s
       {careAttributes(plant).map(([label, values]) => (
         <div className="fact" key={label}>
           <b>{label}</b>
-          {values.join('; ')}
+          <span>{values.join('; ')}</span>
         </div>
       ))}
 
@@ -30,7 +32,7 @@ export function CareInfo({ plant, matchNote }: { plant: NcsuPlant; matchNote?: s
         <>
           <h3>Toxicity</h3>
           {poison.map(([label, values]) => (
-            <div className="fact" key={label}><b>{label}</b>{values.join(' ')}</div>
+            <div className="fact" key={label}><b>{label}</b><span>{values.join(' ')}</span></div>
           ))}
           {tox.length > 0 && <p className="muted">{tox.join(' ')}</p>}
         </>
@@ -40,7 +42,7 @@ export function CareInfo({ plant, matchNote }: { plant: NcsuPlant; matchNote?: s
         <>
           <h3>Common problems</h3>
           {pestAttributes(plant).map(([label, values]) => (
-            <div className="fact" key={label}><b>{label}</b>{values.join('; ')}</div>
+            <div className="fact" key={label}><b>{label}</b><span>{values.join('; ')}</span></div>
           ))}
         </>
       )}
@@ -54,7 +56,7 @@ export function CareInfo({ plant, matchNote }: { plant: NcsuPlant; matchNote?: s
 
       <div className="source">
         Source: <a href={plant.url} target="_blank" rel="noreferrer">{SOURCE_NAME}</a>
-        {' '}· copied {new Date(dataset.fetchedAt).toLocaleDateString()}
+        {', copied '}{new Date(dataset.fetchedAt).toLocaleDateString()}
       </div>
     </div>
   )

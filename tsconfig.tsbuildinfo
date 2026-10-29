@@ -1,1 +1,0 @@
-{"root":["./src/app.tsx","./src/db.ts","./src/ics.ts","./src/main.tsx","./src/plantnet.ts","./src/components/careinfo.tsx","./src/components/plantthumb.tsx","./src/data/ncsu.ts","./src/screens/addplant.tsx","./src/screens/home.tsx","./src/screens/plantdetail.tsx","./src/screens/settings.tsx"],"version":"5.9.3"}
