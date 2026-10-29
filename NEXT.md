@@ -1,0 +1,87 @@
+# Plant Pal — what might still be missing
+
+Status on 2026-10-28: v1 is live at https://fabriziocasanova97.github.io/plant-care-app/ with
+scan-by-photo (needs a Pl@ntNet key), find-by-name, NC State care notes (426 houseplants),
+watering intervals + log, calendar reminders, winter mode, photo timeline, notes, attention
+flag, and removable test plants.
+
+## Must do before handing it to her
+
+- [ ] **Pl@ntNet API key** — create the free account at https://my.plantnet.org and paste the
+      key into Settings on her phone. Photo identification does nothing without it.
+- [ ] **Test on a real phone** — everything so far was checked in a phone-sized browser, not a
+      device. Specifically: camera capture, "Add to Home Screen", the calendar share sheet on
+      iPhone (does Calendar appear as a target?), and the app badge.
+- [ ] **Remove the test plants** once you're done exploring (one tap).
+
+## Reminders — the biggest functional gap
+
+- [ ] **Real push notifications.** A home-screen web app cannot fire a notification at 9 am on
+      its own. Today she gets a badge + calendar events. A true "Water the pothos today" push
+      needs one small free server (Cloudflare Worker + KV, or Vercel) holding her push
+      subscription and a daily cron. Needs a Cloudflare or Vercel account.
+- [ ] **Calendar events drift.** The repeating calendar event is fixed to the day she created
+      it; if she waters late, the app's due date moves but the calendar's does not. Push
+      notifications would fix this; otherwise, a "Refresh calendar" nudge when they diverge.
+- [ ] **Snooze / "watered yesterday".** Only "watered now" exists. A long-press or second
+      button to log a watering for yesterday / pick a date.
+
+## Data safety
+
+- [ ] **Backup & restore.** Everything lives in the phone's browser storage. Clearing Safari
+      data or losing the phone loses the plants, photos and log. Add Export (one JSON file
+      incl. photos) and Import.
+- [ ] **Storage pressure.** iOS can evict a web app's storage if unused for a while and low on
+      space. Ask for persistent storage (`navigator.storage.persist()`) and show whether it
+      was granted.
+- [ ] **Photo size.** Photos are shrunk to 1280 px (~200–400 KB each). Fine for dozens, worth a
+      cap or a warning past a few hundred.
+
+## Plant information
+
+- [ ] **Plants not in NC State's 426.** When Pl@ntNet identifies something outside the list,
+      she gets only a link. Options: a second vetted extension source (Missouri Botanical
+      Garden PlantFinder, UConn, Clemson HGIC) with the same copy-verbatim-and-link rule.
+- [ ] **Refresh the dataset** every few months (`npm run fetch-data`) and show "copied on"
+      — already shown, but no reminder to refresh.
+- [ ] **Common-name quality.** Default names come from NC State's photo captions or its
+      alphabetical list; a few will read oddly (e.g. "Ribbon Plant" for a spider plant). She
+      can rename, but a small curated override list of ~30 popular houseplants would help.
+- [ ] **Toxicity up front.** No pets/kids today, but if that changes, surface the "Poisonous
+      to Humans" severity as a pill on the plant card.
+
+## Everyday use
+
+- [ ] **Multiple photos per capture / pick from library.** The camera is forced
+      (`capture="environment"`); she cannot choose an existing photo from her gallery. Offer
+      both.
+- [ ] **Rooms / grouping.** With 10+ plants, grouping by room ("Bedroom", "Kitchen") or sorting
+      options would keep the list calm. Notes partly cover this today.
+- [ ] **Search within her plants** once the list grows.
+- [ ] **Undo after "Watered"** — a mistaken tap currently has no undo (she'd have to delete
+      the log entry, which isn't possible yet). Add a 5-second undo toast and a way to delete a
+      log entry.
+- [ ] **Edit the watering log** (delete/adjust an entry).
+- [ ] **Light / placement reminders** from the NC State "Light" field vs. her note — e.g. a
+      gentle "NC State lists this as low light tolerant" is already shown; no action needed
+      unless she wants it.
+
+## Polish & robustness
+
+- [ ] **Offline first-run.** The NC State data and fonts are cached by the service worker, but
+      the Google Font is fetched on first load; offline fallback is the system font (fine).
+- [ ] **App update prompt.** Updates apply on next launch silently; a small "Updated" toast
+      would avoid confusion when the look changes.
+- [ ] **Bundle size.** 1.8 MB JS (440 KB gzipped) because the dataset is embedded. Lazy-load
+      the JSON or split per-plant to speed first launch.
+- [ ] **Accessibility pass** with VoiceOver on iPhone (labels exist, not tested with a screen
+      reader).
+- [ ] **Error reporting.** If something breaks on her phone, there's no way to know. A
+      "Report a problem" that copies a diagnostic summary to the clipboard would help you help
+      her.
+
+## Deliberately not planned
+
+- Fertilizer schedules, pest diagnosis from photos, or any advice generated by the app: all
+  of these invite invented information. The rule stays: show the source's words, link it, or
+  say nothing.
