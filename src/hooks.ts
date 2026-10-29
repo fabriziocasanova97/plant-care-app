@@ -15,6 +15,7 @@ export interface WinterSettings {
 export function useWinter(): WinterSettings {
   const rows = useLiveQuery(() => db.settings.bulkGet(['winterMode', 'winterExtra']), [])
   const on = rows?.[0]?.value === '1'
-  const extra = Number(rows?.[1]?.value ?? WINTER_EXTRA_DEFAULT)
+  const stored = Number(rows?.[1]?.value)
+  const extra = Number.isFinite(stored) && stored > 0 ? stored : WINTER_EXTRA_DEFAULT
   return { loaded: rows !== undefined, on, extra, factor: on ? extra / 100 : 0 }
 }

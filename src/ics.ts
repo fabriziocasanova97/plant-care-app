@@ -43,7 +43,7 @@ export function wateringEvent(p: Plant, firstDue: number, hour: number): string 
  * file, so the share sheet is tried first (it offers Calendar); plain download is the fallback.
  * Returns how it was delivered so the UI can explain the next step.
  */
-export async function deliverIcs(filename: string, body: string): Promise<'shared' | 'downloaded'> {
+export async function deliverIcs(filename: string, body: string): Promise<'shared' | 'downloaded' | 'cancelled'> {
   const file = new File([body], filename, { type: 'text/calendar' })
   const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean }
   if (nav.share && nav.canShare?.({ files: [file] })) {
@@ -51,7 +51,7 @@ export async function deliverIcs(filename: string, body: string): Promise<'share
       await nav.share({ files: [file], title: filename })
       return 'shared'
     } catch (e) {
-      if ((e as Error).name === 'AbortError') return 'shared' // she closed the sheet
+      if ((e as Error).name === 'AbortError') return 'cancelled' // she closed the sheet
     }
   }
   const a = document.createElement('a')

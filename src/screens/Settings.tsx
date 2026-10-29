@@ -5,6 +5,7 @@ import { db, getSetting, setSetting, clearSamplePlants } from '../db'
 import { useWinter } from '../hooks'
 import { dataset } from '../data/ncsu'
 import { loadSamplePlants } from '../samples'
+import { formatHour } from '../format'
 
 const WINTER_OPTIONS = [25, 50, 100]
 
@@ -84,7 +85,7 @@ export default function Settings(_: { go: (r: Route) => void }) {
           <span>Calendar reminder time</span>
           <select value={hour} onChange={(e) => setHour(e.target.value)}>
             {Array.from({ length: 24 }, (_, h) => (
-              <option key={h} value={h}>{h === 0 ? '12 am' : h < 12 ? `${h} am` : h === 12 ? '12 pm' : `${h - 12} pm`}</option>
+              <option key={h} value={h}>{formatHour(h)}</option>
             ))}
           </select>
         </label>

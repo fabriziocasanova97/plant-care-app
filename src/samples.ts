@@ -72,7 +72,7 @@ function drawSamplePhoto(label: string, dateLabel: string, hue: number, seed: nu
   g.fillText(`TEST · ${label}`, 24, size - 50)
   g.font = '26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
   g.fillText(dateLabel, 24, size - 16)
-  return new Promise((resolve) => c.toBlob((b) => resolve(b!), 'image/jpeg', 0.85))
+  return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not draw a sample photo'))), 'image/jpeg', 0.85))
 }
 
 /** Replace any earlier samples with a fresh set of three. */
@@ -81,10 +81,11 @@ export async function loadSamplePlants() {
   for (const [i, s] of SAMPLES.entries()) {
     const profile = getPlant(s.slug)
     const lastWateredAt = daysAgo(s.waterings[s.waterings.length - 1])
-    const photos = await Promise.all(s.photos.map((d, j) =>
+    // A photo that fails to draw is simply skipped; the plant still loads.
+    const photos = (await Promise.all(s.photos.map((d, j) =>
       drawSamplePhoto(s.nickname.replace(' (test)', ''), new Date(daysAgo(d)).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }), s.hue, i * 10 + j)
-        .then((blob) => ({ blob, at: daysAgo(d, 15) })),
-    ))
+        .then((blob) => ({ blob, at: daysAgo(d, 15) }), () => null),
+    ))).filter((p): p is { blob: Blob; at: number } => p !== null)
     await db.transaction('rw', db.plants, db.waterings, db.photos, async () => {
       const id = await db.plants.add({
         nickname: s.nickname,

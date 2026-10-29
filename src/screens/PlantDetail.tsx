@@ -9,6 +9,7 @@ import { PlantThumb } from '../components/PlantThumb'
 import { dueLabel } from './Home'
 import { wateringEvent, deliverIcs } from '../ics'
 import { shrinkImage } from '../plantnet'
+import { formatHour } from '../format'
 import { BackIcon, PencilIcon, CheckIcon, CameraIcon, DropIcon, CalendarIcon, FlagIcon, CloseIcon, TrashIcon, SnowIcon } from '../components/Icons'
 
 const dateLabel = (t: number) => new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
@@ -75,9 +76,22 @@ export default function PlantDetail({ id, go }: { id: number; go: (r: Route) => 
   const [calendarNote, setCalendarNote] = useState<string | null>(null)
   const [viewing, setViewing] = useState<Photo | null>(null)
   const photoInput = useRef<HTMLInputElement>(null)
+  // Unsaved note text and its debounce timer, so leaving the page (even via the back button) never loses it.
+  const pendingNote = useRef<string | null>(null)
+  const noteTimer = useRef<number>()
 
   useEffect(() => { getSetting('reminderHour').then((h) => h && setHour(Number(h))) }, [])
   useEffect(() => { if (plant) setName(plant.nickname) }, [plant?.nickname])
+  useEffect(() => () => {
+    window.clearTimeout(noteTimer.current)
+    if (pendingNote.current !== null) db.plants.update(id, { note: pendingNote.current.trim() })
+  }, [id])
+  // The full-screen photo lives in history, so the back button closes it instead of leaving the page.
+  useEffect(() => {
+    const onPop = () => setViewing(null)
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
 
   if (plant === undefined || !winter.loaded) return null // still loading from the database
   if (!plant) return <div className="empty">Plant not found.</div>
@@ -85,7 +99,7 @@ export default function PlantDetail({ id, go }: { id: number; go: (r: Route) => 
   const f = winter.factor
   const label = dueLabel(plant, f)
   const every = effectiveInterval(plant, f)
-  const hourLabel = hour === 0 ? '12 am' : hour < 12 ? `${hour} am` : hour === 12 ? '12 pm' : `${hour - 12} pm`
+  const hourLabel = formatHour(hour)
 
   async function updateInterval(d: number) {
     await db.plants.update(id, { intervalDays: Math.min(60, Math.max(1, d)) })
@@ -94,8 +108,26 @@ export default function PlantDetail({ id, go }: { id: number; go: (r: Route) => 
     await db.plants.update(id, { nickname: name.trim() || plant!.nickname })
     setEditing(false)
   }
-  async function saveNote() {
-    if (note !== null) await db.plants.update(id, { note: note.trim() })
+  function flushNote() {
+    window.clearTimeout(noteTimer.current)
+    if (pendingNote.current === null) return
+    const text = pendingNote.current.trim()
+    pendingNote.current = null
+    db.plants.update(id, { note: text })
+  }
+  function onNoteChange(text: string) {
+    setNote(text)
+    pendingNote.current = text
+    window.clearTimeout(noteTimer.current)
+    noteTimer.current = window.setTimeout(flushNote, 600)
+  }
+  function openViewer(p: Photo) {
+    history.pushState({ name: 'plant', id, viewer: true }, '')
+    setViewing(p)
+  }
+  function closeViewer() {
+    if ((history.state as { viewer?: boolean } | null)?.viewer) history.back()
+    else setViewing(null)
   }
   async function remove() {
     if (!confirm(`Remove ${plant!.nickname}?`)) return
@@ -106,8 +138,8 @@ export default function PlantDetail({ id, go }: { id: number; go: (r: Route) => 
     const first = nextDue(plant!, f) ?? startOfDay(Date.now())
     const body = wateringEvent({ ...plant!, intervalDays: every }, Math.max(first, startOfDay(Date.now())), hour)
     const how = await deliverIcs(`water-${plant!.nickname.replace(/\W+/g, '-').toLowerCase()}.ics`, body)
-    setCalendarNote(how === 'shared'
-      ? 'In the share sheet, choose Calendar (or “Add to Calendar”).'
+    setCalendarNote(how === 'cancelled' ? null
+      : how === 'shared' ? 'In the share sheet, choose Calendar (or “Add to Calendar”).'
       : 'Open the downloaded .ics file to add it to your calendar.')
   }
   async function newPhoto(file: File | undefined) {
@@ -117,13 +149,13 @@ export default function PlantDetail({ id, go }: { id: number; go: (r: Route) => 
   async function removePhoto(p: Photo) {
     if (!confirm('Delete this photo?')) return
     await deletePhoto(p.id!)
-    setViewing(null)
+    closeViewer()
   }
 
   return (
     <div>
       <div className="screen-head">
-        <button className="icon-btn back" onClick={() => go({ name: 'home' })} aria-label="Back to my plants"><BackIcon /></button>
+        <button className="icon-btn back" onClick={() => ((history.state as Route | null)?.name === 'plant' ? history.back() : go({ name: 'home' }))} aria-label="Back to my plants"><BackIcon /></button>
         {editing ? (
           <form className="name-edit" onSubmit={(e) => { e.preventDefault(); saveName() }}>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} onBlur={saveName} autoFocus aria-label="Plant name" />
@@ -139,7 +171,7 @@ export default function PlantDetail({ id, go }: { id: number; go: (r: Route) => 
 
       <div className="photo-wrap">
         {photos && photos.length > 0 ? (
-          <button type="button" className="photo-open" onClick={() => setViewing(photos[0])} aria-label="View photo full screen">
+          <button type="button" className="photo-open" onClick={() => openViewer(photos[0])} aria-label="View photo full screen">
             <PlantThumb photo={plant.photo} big />
           </button>
         ) : (
@@ -188,7 +220,7 @@ export default function PlantDetail({ id, go }: { id: number; go: (r: Route) => 
         <label className="field">
           <span>My notes</span>
           <textarea rows={2} placeholder="Where it lives, what you’ve noticed…" value={note ?? plant.note ?? ''}
-            onChange={(e) => setNote(e.target.value)} onBlur={saveNote} />
+            onChange={(e) => onNoteChange(e.target.value)} onBlur={flushNote} />
         </label>
       </div>
 
@@ -196,7 +228,7 @@ export default function PlantDetail({ id, go }: { id: number; go: (r: Route) => 
         <>
           <h2>Photos</h2>
           <div className="photo-strip">
-            {photos.map((p) => <PhotoTile key={p.id} photo={p} onOpen={() => setViewing(p)} />)}
+            {photos.map((p) => <PhotoTile key={p.id} photo={p} onOpen={() => openViewer(p)} />)}
           </div>
         </>
       )}
@@ -225,7 +257,7 @@ export default function PlantDetail({ id, go }: { id: number; go: (r: Route) => 
 
       <button className="btn small danger" style={{ marginTop: 24 }} onClick={remove}>Remove plant</button>
 
-      {viewing && <PhotoViewer photo={viewing} onClose={() => setViewing(null)} onDelete={() => removePhoto(viewing)} />}
+      {viewing && <PhotoViewer photo={viewing} onClose={closeViewer} onDelete={() => removePhoto(viewing)} />}
     </div>
   )
 }

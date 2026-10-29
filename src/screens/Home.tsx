@@ -47,6 +47,38 @@ function WinterNudge() {
   )
 }
 
+/** One plant in the list. Module-level so rows keep their identity (and photo URLs) across re-renders. */
+function Row({ p, f, go }: { p: Plant; f: number; go: (r: Route) => void }) {
+  const label = dueLabel(p, f)
+  const left = remainingFraction(p, f)
+  return (
+    <div className="card plant-card">
+      <button className="plant-row" onClick={() => go({ name: 'plant', id: p.id! })}>
+        <PlantThumb photo={p.photo} />
+        <div className="grow">
+          <div className="title">
+            {p.attention && <FlagIcon className="flag" aria-label="Flagged" />}
+            {p.nickname}
+            {p.isSample && <span className="tag test">Test</span>}
+          </div>
+          <div className="muted sci">{p.identifiedAs?.scientificName ?? 'Not identified'}</div>
+          <div className="status-row">
+            <div className={`track ${label.cls}`} aria-hidden="true">
+              <i style={{ width: `${Math.round((left ?? 0) * 100)}%` }} />
+            </div>
+            <span className={`pill ${label.cls}`}>{label.text}</span>
+          </div>
+        </div>
+      </button>
+      {label.cls === 'due' && (
+        <button className="btn small water watered-btn" onClick={() => markWatered(p.id!)}>
+          <DropIcon /> Watered just now
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function Home({ go }: { go: (r: Route) => void }) {
   const plants = useLiveQuery(() => db.plants.toArray(), [])
   const winter = useWinter()
@@ -67,37 +99,6 @@ export default function Home({ go }: { go: (r: Route) => void }) {
           <p>Add your first plant from a photo, or find it by name.</p>
           <button className="btn primary" onClick={() => go({ name: 'add' })}>Add a plant</button>
         </div>
-      </div>
-    )
-  }
-
-  const Row = ({ p }: { p: Plant }) => {
-    const label = dueLabel(p, f)
-    const left = remainingFraction(p, f)
-    return (
-      <div className="card plant-card">
-        <button className="plant-row" onClick={() => go({ name: 'plant', id: p.id! })}>
-          <PlantThumb photo={p.photo} />
-          <div className="grow">
-            <div className="title">
-              {p.attention && <FlagIcon className="flag" aria-label="Flagged" />}
-              {p.nickname}
-              {p.isSample && <span className="tag test">Test</span>}
-            </div>
-            <div className="muted sci">{p.identifiedAs?.scientificName ?? 'Not identified'}</div>
-            <div className="status-row">
-              <div className={`track ${label.cls}`} aria-hidden="true">
-                <i style={{ width: `${Math.round((left ?? 0) * 100)}%` }} />
-              </div>
-              <span className={`pill ${label.cls}`}>{label.text}</span>
-            </div>
-          </div>
-        </button>
-        {label.cls === 'due' && (
-          <button className="btn small water watered-btn" onClick={() => markWatered(p.id!)}>
-            <DropIcon /> Watered just now
-          </button>
-        )}
       </div>
     )
   }
@@ -130,9 +131,9 @@ export default function Home({ go }: { go: (r: Route) => void }) {
         </div>
       )}
       {due.length > 0 && <h2>Water today</h2>}
-      {due.map((p) => <Row key={p.id} p={p} />)}
+      {due.map((p) => <Row key={p.id} p={p} f={f} go={go} />)}
       {later.length > 0 && <h2>Coming up</h2>}
-      {later.map((p) => <Row key={p.id} p={p} />)}
+      {later.map((p) => <Row key={p.id} p={p} f={f} go={go} />)}
     </div>
   )
 }

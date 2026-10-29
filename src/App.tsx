@@ -35,8 +35,11 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPop)
   }, [])
 
+  // Drilling into a plant adds a history entry (back returns to the list); switching
+  // top-level tabs replaces it, so back never has to walk through every tab tap.
   const go = (r: Route) => {
-    history.pushState(r, '')
+    if (r.name === 'plant') history.pushState(r, '')
+    else history.replaceState(r, '')
     setRoute(r)
     window.scrollTo(0, 0)
   }
