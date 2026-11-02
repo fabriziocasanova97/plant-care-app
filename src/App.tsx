@@ -7,13 +7,36 @@ import PlantDetail from './screens/PlantDetail'
 import Settings from './screens/Settings'
 import { LeafIcon, CameraIcon, GearIcon } from './components/Icons'
 import { useWinter } from './hooks'
+import { applySetupLinkFromUrl, type SetupResult } from './setup'
+
+const SETUP_MESSAGES: Record<Exclude<SetupResult, null | 'declined'>, { text: string; cls: string }> = {
+  saved: { text: 'Photo identification is ready. Tap Scan to try it.', cls: 'ok' },
+  same: { text: 'Photo identification was already set up on this phone.', cls: 'ok' },
+  invalid: { text: 'That setup link looks incomplete. Ask for a new one, or paste the key in Settings.', cls: 'err' },
+}
 
 export type Route = { name: 'home' } | { name: 'add' } | { name: 'plant'; id: number } | { name: 'settings' }
 
 export default function App() {
   const [route, setRoute] = useState<Route>({ name: 'home' })
+  const [toast, setToast] = useState<{ text: string; cls: string } | null>(null)
   const plants = useLiveQuery(() => db.plants.toArray(), [])
   const winter = useWinter()
+
+  // Opened from a setup link (or one was opened while the app was already showing)?
+  // Save the key, clean the address bar, and say so.
+  useEffect(() => {
+    let timer: number | undefined
+    const check = () => applySetupLinkFromUrl().then((r) => {
+      if (!r || r === 'declined') return
+      setToast(SETUP_MESSAGES[r])
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => setToast(null), 6000)
+    })
+    check()
+    window.addEventListener('hashchange', check)
+    return () => window.removeEventListener('hashchange', check)
+  }, [])
 
   // App icon badge = number of plants due today or overdue (where the browser supports it).
   useEffect(() => {
@@ -46,6 +69,9 @@ export default function App() {
 
   return (
     <div className="app">
+      {toast && (
+        <div className={`toast notice ${toast.cls}`} role="status" onClick={() => setToast(null)}>{toast.text}</div>
+      )}
       {route.name === 'home' && <Home go={go} />}
       {route.name === 'add' && <AddPlant go={go} />}
       {route.name === 'plant' && <PlantDetail id={route.id} go={go} />}

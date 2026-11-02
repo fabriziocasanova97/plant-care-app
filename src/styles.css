@@ -365,3 +365,9 @@ textarea:focus { border-color: var(--water); outline: none; box-shadow: 0 0 0 3p
 .plant-row .tag.test { margin-top: 0; }
 .nudge.test { border-color: var(--amber-soft); }
 .nudge.test strong { color: var(--amber); }
+
+/* One-off status message (e.g. after opening a setup link) */
+.toast {
+  position: fixed; left: 16px; right: 16px; top: calc(12px + env(safe-area-inset-top)); z-index: 30;
+  max-width: 528px; margin: 0 auto; box-shadow: var(--shadow); cursor: pointer;
+}

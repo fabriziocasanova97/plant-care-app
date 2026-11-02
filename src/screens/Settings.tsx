@@ -6,6 +6,7 @@ import { useWinter } from '../hooks'
 import { dataset } from '../data/ncsu'
 import { loadSamplePlants } from '../samples'
 import { formatHour } from '../format'
+import { keyFromLink, shareSetupLink } from '../setup'
 
 const WINTER_OPTIONS = [25, 50, 100]
 
@@ -14,8 +15,23 @@ export default function Settings(_: { go: (r: Route) => void }) {
   const [hour, setHour] = useState('9')
   const [saved, setSaved] = useState(false)
   const [loadingSamples, setLoadingSamples] = useState(false)
+  const [shareNote, setShareNote] = useState<string | null>(null)
   const winter = useWinter()
   const sampleCount = useLiveQuery(() => db.plants.filter((p) => !!p.isSample).count(), [])
+  const savedKey = useLiveQuery(() => getSetting('plantnetKey').then((k) => k ?? ''), [])
+
+  /** The key field also accepts a whole setup link (the fallback if the link didn't carry over). */
+  function onKeyInput(text: string) {
+    setKey(keyFromLink(text) ?? text)
+  }
+
+  async function share() {
+    if (!savedKey) return
+    const r = await shareSetupLink(savedKey)
+    setShareNote(r === 'copied' ? 'Link copied. Paste it into a message to her.'
+      : r === 'failed' ? 'Could not share or copy the link on this device.'
+      : null)
+  }
 
   async function addSamples() {
     setLoadingSamples(true)
@@ -77,9 +93,16 @@ export default function Settings(_: { go: (r: Route) => void }) {
         <h3>Photo identification</h3>
         <label className="field">
           <span>Pl@ntNet API key</span>
-          <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="Paste key" autoCapitalize="off" autoCorrect="off" />
+          <input type="password" value={key} onChange={(e) => onKeyInput(e.target.value)} placeholder="Paste the key or a setup link" autoCapitalize="off" autoCorrect="off" />
         </label>
         <p className="muted">Free at <a href="https://my.plantnet.org" target="_blank" rel="noreferrer">my.plantnet.org</a> (500 identifications a day). The key stays on this phone.</p>
+        {savedKey && (
+          <>
+            <button type="button" className="btn block" onClick={share}>Share setup link</button>
+            <p className="muted">Sends a link that sets up photo identification on another phone in one tap. Share it only with people you trust; it uses your daily identifications.</p>
+            {shareNote && <p className="notice ok mt">{shareNote}</p>}
+          </>
+        )}
         <h3>Reminders</h3>
         <label className="field">
           <span>Calendar reminder time</span>
