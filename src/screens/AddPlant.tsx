@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { Route } from '../App'
 import { db, getSetting } from '../db'
 import { identify, shrinkImage, type Candidate } from '../plantnet'
+import { identifyWithClaude } from '../claude'
 import { findByScientificName, searchPlants, displayName, type NcsuPlant } from '../data/ncsu'
 import { CareInfo } from '../components/CareInfo'
 import { PlantThumb } from '../components/PlantThumb'
@@ -43,7 +44,9 @@ function careTag(name: string) {
 export default function AddPlant({ go }: { go: (r: Route) => void }) {
   const [step, setStep] = useState<Step>('photo')
   const [photo, setPhoto] = useState<Blob | null>(null)
-  const [apiKey, setApiKey] = useState<string | undefined>()
+  const [claudeKey, setClaudeKey] = useState<string | undefined>()
+  const [plantnetKey, setPlantnetKey] = useState<string | undefined>()
+  const [provider, setProvider] = useState<'Claude' | 'Pl@ntNet'>('Claude')
   const [error, setError] = useState<string | null>(null)
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [remaining, setRemaining] = useState<number | null>(null)
@@ -54,7 +57,12 @@ export default function AddPlant({ go }: { go: (r: Route) => void }) {
   const [days, setDays] = useState(7)
   const fileInput = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { getSetting('plantnetKey').then(setApiKey) }, [])
+  useEffect(() => {
+    getSetting('anthropicKey').then(setClaudeKey)
+    getSetting('plantnetKey').then(setPlantnetKey)
+  }, [])
+  const hasKey = !!(claudeKey || plantnetKey)
+  const providerName = claudeKey ? 'Claude' : 'Pl@ntNet'
 
   async function onFile(file: File | undefined) {
     if (!file) return
@@ -67,17 +75,18 @@ export default function AddPlant({ go }: { go: (r: Route) => void }) {
       return
     }
     setPhoto(small)
-    if (!apiKey) {
-      setError('No Pl@ntNet API key yet. Add it in Settings, or pick the plant by name below.')
+    if (!hasKey) {
+      setError('No Claude API key yet. Add it in Settings, or pick the plant by name below.')
       setStep('choose')
       return
     }
     setStep('identifying')
     try {
-      const r = await identify(small, apiKey)
+      setProvider(providerName)
+      const r = claudeKey ? await identifyWithClaude(small, claudeKey) : await identify(small, plantnetKey!)
       setCandidates(r.candidates)
       setRemaining(r.remaining)
-      if (r.candidates.length === 0) setError('Pl@ntNet returned no match. You can pick the plant by name below.')
+      if (r.candidates.length === 0) setError(`${providerName} couldn't recognize a plant in this photo. You can pick the plant by name below.`)
     } catch (e) {
       setError((e as Error).message)
     }
@@ -130,14 +139,14 @@ export default function AddPlant({ go }: { go: (r: Route) => void }) {
             <button className="btn primary" onClick={() => fileInput.current?.click()}><CameraIcon /> Take a photo</button>
             <button className="btn" onClick={() => { setStep('choose') }}><SearchIcon /> Find by name instead</button>
           </div>
-          {!apiKey && <p className="notice" style={{ marginTop: 16, textAlign: 'left' }}>Photo identification needs a Pl@ntNet API key. Add it in Settings. Finding a plant by name works without one.</p>}
+          {!hasKey && <p className="notice" style={{ marginTop: 16, textAlign: 'left' }}>Photo identification needs a Claude API key. Add it in Settings. Finding a plant by name works without one.</p>}
         </div>
       )}
 
       {step === 'identifying' && (
         <div className="identifying stack">
           <PlantThumb photo={photo} big />
-          <p className="muted"><span className="pulse" />Asking Pl@ntNet…</p>
+          <p className="muted"><span className="pulse" />Asking {providerName}…</p>
         </div>
       )}
 
@@ -148,7 +157,7 @@ export default function AddPlant({ go }: { go: (r: Route) => void }) {
           {candidates.length > 0 && (
             <>
               <h2>Which one is it?</h2>
-              <p className="muted" style={{ marginTop: -4 }}>Matches from Pl@ntNet, most likely first. Below 30% is a guess.</p>
+              <p className="muted" style={{ marginTop: -4 }}>Matches from {provider}, most likely first. {provider === 'Claude' ? 'The percentages are Claude’s own confidence, not a measurement. ' : ''}Below 30% is a guess.</p>
               {candidates.map((c, i) => {
                 const pct = Math.round(c.score * 100)
                 return (
