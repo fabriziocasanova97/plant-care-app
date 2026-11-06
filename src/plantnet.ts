@@ -18,6 +18,8 @@ export async function identify(image: Blob, apiKey: string): Promise<{ candidate
 
   const res = await fetch(url, { method: 'POST', body: form })
   if (res.status === 401) throw new Error('Pl@ntNet rejected the API key. Check it in Settings.')
+  if (res.status === 403) throw new Error('Pl@ntNet refused this key (403). In your my.plantnet.org account, check that the key is active and that fabriziocasanova97.github.io is allowed for it, then try again.')
+  if (res.status === 429) throw new Error('Pl@ntNet daily limit reached (500 identifications a day). Try again tomorrow, or pick the plant by name.')
   if (res.status === 404) throw new Error('Pl@ntNet could not recognize a plant in this photo. Try a closer photo of a leaf or flower.')
   if (!res.ok) throw new Error(`Pl@ntNet error ${res.status}`)
   const json = await res.json()
