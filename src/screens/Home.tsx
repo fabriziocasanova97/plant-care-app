@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, daysUntilDue, isDue, markWatered, effectiveInterval, seasonKey, setSetting, clearSamplePlants, WINTER_MONTHS, type Plant } from '../db'
+import { db, daysUntilDue, isDue, effectiveInterval, seasonKey, setSetting, clearSamplePlants, WINTER_MONTHS, type Plant } from '../db'
+import { waterWithUndo } from '../toast'
 import { useWinter } from '../hooks'
 import type { Route } from '../App'
 import { PlantThumb } from '../components/PlantThumb'
@@ -71,7 +72,7 @@ function Row({ p, f, go }: { p: Plant; f: number; go: (r: Route) => void }) {
         </div>
       </button>
       {label.cls === 'due' && (
-        <button className="btn small water watered-btn" onClick={() => markWatered(p.id!)}>
+        <button className="btn small water watered-btn" onClick={() => waterWithUndo(p.id!, p.nickname)}>
           <DropIcon /> Watered just now
         </button>
       )}

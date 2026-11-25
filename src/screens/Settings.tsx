@@ -7,11 +7,14 @@ import { dataset } from '../data/ncsu'
 import { loadSamplePlants } from '../samples'
 import { formatHour } from '../format'
 import { keyFromLink, shareSetupLink } from '../setup'
+import { showToast } from '../toast'
 
 const WINTER_OPTIONS = [25, 50, 100]
 
 export default function Settings(_: { go: (r: Route) => void }) {
   const [key, setKey] = useState('')
+  /** True once she types in the key field; until then the field mirrors the saved key. */
+  const [keyEdited, setKeyEdited] = useState(false)
   const [hour, setHour] = useState('9')
   const [saved, setSaved] = useState(false)
   const [loadingSamples, setLoadingSamples] = useState(false)
@@ -20,9 +23,21 @@ export default function Settings(_: { go: (r: Route) => void }) {
   const sampleCount = useLiveQuery(() => db.plants.filter((p) => !!p.isSample).count(), [])
   const savedKey = useLiveQuery(() => getSetting('plantnetKey').then((k) => k ?? ''), [])
 
-  /** The key field also accepts a whole setup link (the fallback if the link didn't carry over). */
-  function onKeyInput(text: string) {
-    setKey(keyFromLink(text) ?? text)
+  // Keep the field in step with the saved key (it can arrive later, e.g. from a setup link).
+  useEffect(() => { if (!keyEdited && savedKey !== undefined) setKey(savedKey) }, [savedKey, keyEdited])
+
+  /** The key field also accepts a whole setup link (the fallback if the link didn't carry over): saved right away. */
+  async function onKeyInput(text: string) {
+    const fromLink = keyFromLink(text)
+    if (fromLink) {
+      await setSetting('plantnetKey', fromLink)
+      setKey(fromLink)
+      setKeyEdited(false)
+      showToast({ text: 'Photo identification is ready. Tap Scan to try it.', cls: 'ok' })
+      return
+    }
+    setKey(text)
+    setKeyEdited(true)
   }
 
   async function share() {
@@ -39,12 +54,15 @@ export default function Settings(_: { go: (r: Route) => void }) {
   }
 
   useEffect(() => {
-    getSetting('plantnetKey').then((k) => k && setKey(k))
     getSetting('reminderHour').then((h) => h && setHour(h))
   }, [])
 
   async function save() {
-    await setSetting('plantnetKey', key.trim())
+    // Only write the key she actually edited, so saving the reminder time can never wipe it.
+    if (keyEdited) {
+      await setSetting('plantnetKey', key.trim())
+      setKeyEdited(false)
+    }
     await setSetting('reminderHour', hour)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)

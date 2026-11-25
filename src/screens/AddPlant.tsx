@@ -5,7 +5,7 @@ import { identify, shrinkImage, type Candidate } from '../plantnet'
 import { findByScientificName, searchPlants, displayName, type NcsuPlant } from '../data/ncsu'
 import { CareInfo } from '../components/CareInfo'
 import { PlantThumb } from '../components/PlantThumb'
-import { CameraIcon, SearchIcon, SproutArt } from '../components/Icons'
+import { CameraIcon, SearchIcon, SproutArt, ImageIcon } from '../components/Icons'
 
 type Step = 'photo' | 'identifying' | 'choose' | 'details'
 
@@ -53,6 +53,7 @@ export default function AddPlant({ go }: { go: (r: Route) => void }) {
   const [nickname, setNickname] = useState('')
   const [days, setDays] = useState(7)
   const fileInput = useRef<HTMLInputElement>(null)
+  const libraryInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => { getSetting('plantnetKey').then(setApiKey) }, [])
 
@@ -120,7 +121,9 @@ export default function AddPlant({ go }: { go: (r: Route) => void }) {
       <div className="screen-head"><h1>Add a plant</h1></div>
       <Steps step={step} />
       <input ref={fileInput} className="hidden-input" type="file" accept="image/*" capture="environment"
-        onChange={(e) => onFile(e.target.files?.[0])} />
+        onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = '' }} />
+      <input ref={libraryInput} className="hidden-input" type="file" accept="image/*"
+        onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = '' }} />
 
       {step === 'photo' && (
         <div className="scan-hero">
@@ -128,6 +131,7 @@ export default function AddPlant({ go }: { go: (r: Route) => void }) {
           <p>Take a clear photo of one leaf or flower, filling most of the frame.</p>
           <div className="stack">
             <button className="btn primary" onClick={() => fileInput.current?.click()}><CameraIcon /> Take a photo</button>
+            <button className="btn" onClick={() => libraryInput.current?.click()}><ImageIcon /> Choose from my photos</button>
             <button className="btn" onClick={() => { setStep('choose') }}><SearchIcon /> Find by name instead</button>
           </div>
           {!apiKey && <p className="notice" style={{ marginTop: 16, textAlign: 'left' }}>Photo identification needs a Pl@ntNet API key. Add it in Settings. Finding a plant by name works without one.</p>}

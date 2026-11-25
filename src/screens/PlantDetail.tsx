@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import type { Route } from '../App'
-import { db, markWatered, nextDue, getSetting, startOfDay, effectiveInterval, daysSince, addPhoto, deletePhoto, removePlant, type Photo } from '../db'
+import { db, deleteWatering, nextDue, getSetting, startOfDay, effectiveInterval, daysSince, addPhoto, deletePhoto, removePlant, type Photo } from '../db'
+import { waterWithUndo } from '../toast'
 import { useWinter } from '../hooks'
 import { getPlant } from '../data/ncsu'
 import { CareInfo } from '../components/CareInfo'
@@ -155,7 +156,7 @@ export default function PlantDetail({ id, go }: { id: number; go: (r: Route) => 
   return (
     <div>
       <div className="screen-head">
-        <button className="icon-btn back" onClick={() => ((history.state as Route | null)?.name === 'plant' ? history.back() : go({ name: 'home' }))} aria-label="Back to my plants"><BackIcon /></button>
+        <button className="icon-btn back" onClick={() => go({ name: 'home' })} aria-label="Back to my plants"><BackIcon /></button>
         {editing ? (
           <form className="name-edit" onSubmit={(e) => { e.preventDefault(); saveName() }}>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} onBlur={saveName} autoFocus aria-label="Plant name" />
@@ -177,7 +178,8 @@ export default function PlantDetail({ id, go }: { id: number; go: (r: Route) => 
         ) : (
           <PlantThumb photo={plant.photo} big />
         )}
-        <input ref={photoInput} className="hidden-input" type="file" accept="image/*" capture="environment" onChange={(e) => { newPhoto(e.target.files?.[0]); e.target.value = '' }} />
+        {/* No `capture`: the phone then offers both the camera and the photo library. */}
+        <input ref={photoInput} className="hidden-input" type="file" accept="image/*" onChange={(e) => { newPhoto(e.target.files?.[0]); e.target.value = '' }} />
         <button type="button" className="photo-chip" onClick={() => photoInput.current?.click()}>
           <CameraIcon /> {plant.photo ? 'New photo' : 'Add photo'}
         </button>
@@ -189,7 +191,7 @@ export default function PlantDetail({ id, go }: { id: number; go: (r: Route) => 
             <div className="muted">Next watering</div>
             <span className={`pill ${label.cls}`}>{label.text}</span>
           </div>
-          <button className="btn water" onClick={() => markWatered(id)}><DropIcon /> Watered now</button>
+          <button className="btn water" onClick={() => waterWithUndo(id, plant.nickname)}><DropIcon /> Watered now</button>
         </div>
         {plant.lastWateredAt !== null && <p className="muted mt">Last watered {agoLabel(plant.lastWateredAt)}.</p>}
         <label className="field">
@@ -248,8 +250,10 @@ export default function PlantDetail({ id, go }: { id: number; go: (r: Route) => 
         <ul className="log card">
           {log.map((w) => (
             <li key={w.id}>
-              <span>{new Date(w.at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+              <span className="grow">{new Date(w.at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
               <span className="muted">{new Date(w.at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
+              <button type="button" className="icon-btn small" aria-label="Delete this entry"
+                onClick={() => { if (confirm('Delete this watering from the log?')) deleteWatering(w.id!) }}><CloseIcon /></button>
             </li>
           ))}
         </ul>

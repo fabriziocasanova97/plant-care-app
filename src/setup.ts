@@ -3,7 +3,8 @@
 import { getSetting, setSetting } from './db'
 
 const PARAM = 'setup'
-const APP_URL = 'https://fabriziocasanova97.github.io/plant-care-app/'
+/** Wherever the app is running (GitHub Pages today), so links keep working if it moves. */
+const appUrl = () => location.origin + import.meta.env.BASE_URL
 
 /** Pl@ntNet keys are short runs of letters and digits; reject anything else (typos, stray text). */
 function cleanKey(raw: string | null | undefined): string | null {
@@ -18,7 +19,7 @@ export function keyFromLink(text: string): string | null {
 }
 
 export function buildSetupLink(key: string): string {
-  return `${APP_URL}#${PARAM}=${encodeURIComponent(key.trim())}`
+  return `${appUrl()}#${PARAM}=${encodeURIComponent(key.trim())}`
 }
 
 export type SetupResult = 'saved' | 'same' | 'declined' | 'invalid' | null
@@ -34,7 +35,10 @@ export async function applySetupLinkFromUrl(): Promise<SetupResult> {
   if (!key) return 'invalid'
   const current = await getSetting('plantnetKey')
   if (current === key) return 'same'
-  if (current && !confirm('This phone already has a different Pl@ntNet key. Replace it with the one from this link?')) return 'declined'
+  const question = current
+    ? 'This phone already has a different Pl@ntNet key. Replace it with the one from this link?'
+    : 'Turn on photo identification in Plant Pal with this link?'
+  if (!confirm(question)) return 'declined'
   await setSetting('plantnetKey', key)
   return 'saved'
 }

@@ -368,6 +368,16 @@ textarea:focus { border-color: var(--water); outline: none; box-shadow: 0 0 0 3p
 
 /* One-off status message (e.g. after opening a setup link) */
 .toast {
-  position: fixed; left: 16px; right: 16px; top: calc(12px + env(safe-area-inset-top)); z-index: 30;
+  position: fixed; left: 16px; right: 16px; bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom)); z-index: 30;
   max-width: 528px; margin: 0 auto; box-shadow: var(--shadow); cursor: pointer;
 }
+
+/* App-wide message strip, optionally with an action ("Undo") */
+.toast { display: flex; align-items: center; gap: 12px; }
+.toast-action {
+  flex: none; min-height: 40px; padding: 6px 14px; border-radius: 999px; border: 0; cursor: pointer;
+  background: var(--green); color: var(--on-green); font-weight: 700;
+}
+.log li { align-items: center; gap: 8px; }
+.icon-btn.small { width: 36px; height: 36px; color: var(--muted); }
+.icon-btn.small svg { width: 16px; height: 16px; }

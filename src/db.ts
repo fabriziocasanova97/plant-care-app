@@ -102,10 +102,31 @@ export function startOfDay(t: number): number {
   return d.getTime()
 }
 
+/** Log a watering. Returns what `undoWatering` needs to take it back. */
 export async function markWatered(plantId: number, at = Date.now()) {
-  await db.transaction('rw', db.plants, db.waterings, async () => {
-    await db.waterings.add({ plantId, at })
+  return db.transaction('rw', db.plants, db.waterings, async () => {
+    const before = (await db.plants.get(plantId))?.lastWateredAt ?? null
+    const wateringId = (await db.waterings.add({ plantId, at })) as number
     await db.plants.update(plantId, { lastWateredAt: at })
+    return { plantId, wateringId, before }
+  })
+}
+
+export async function undoWatering(u: { plantId: number; wateringId: number; before: number | null }) {
+  await db.transaction('rw', db.plants, db.waterings, async () => {
+    await db.waterings.delete(u.wateringId)
+    await db.plants.update(u.plantId, { lastWateredAt: u.before })
+  })
+}
+
+/** Delete one log entry; "last watered" becomes the newest remaining entry (or never). */
+export async function deleteWatering(wateringId: number) {
+  await db.transaction('rw', db.plants, db.waterings, async () => {
+    const w = await db.waterings.get(wateringId)
+    if (!w) return
+    await db.waterings.delete(wateringId)
+    const rest = await db.waterings.where('plantId').equals(w.plantId).sortBy('at')
+    await db.plants.update(w.plantId, { lastWateredAt: rest.length ? rest[rest.length - 1].at : null })
   })
 }
 

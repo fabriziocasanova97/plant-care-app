@@ -90,6 +90,14 @@ export const TrashIcon = (p: SVGProps<SVGSVGElement>) => (
   </svg>
 )
 
+export const ImageIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <rect x="4" y="5" width="16" height="14" rx="2" />
+    <circle cx="9" cy="10" r="1.6" />
+    <path d="M20 16l-4.5-4.5L7 19" />
+  </svg>
+)
+
 /** A potted sprout for empty states. */
 export const SproutArt = (p: SVGProps<SVGSVGElement>) => (
   <svg width="120" height="120" viewBox="0 0 120 120" fill="none" aria-hidden="true" {...p}>

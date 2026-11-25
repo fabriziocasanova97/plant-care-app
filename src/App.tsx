@@ -8,8 +8,9 @@ import Settings from './screens/Settings'
 import { LeafIcon, CameraIcon, GearIcon } from './components/Icons'
 import { useWinter } from './hooks'
 import { applySetupLinkFromUrl, type SetupResult } from './setup'
+import { showToast, useToast, type Toast } from './toast'
 
-const SETUP_MESSAGES: Record<Exclude<SetupResult, null | 'declined'>, { text: string; cls: string }> = {
+const SETUP_MESSAGES: Record<Exclude<SetupResult, null | 'declined'>, Toast> = {
   saved: { text: 'Photo identification is ready. Tap Scan to try it.', cls: 'ok' },
   same: { text: 'Photo identification was already set up on this phone.', cls: 'ok' },
   invalid: { text: 'That setup link looks incomplete. Ask for a new one, or paste the key in Settings.', cls: 'err' },
@@ -17,25 +18,30 @@ const SETUP_MESSAGES: Record<Exclude<SetupResult, null | 'declined'>, { text: st
 
 export type Route = { name: 'home' } | { name: 'add' } | { name: 'plant'; id: number } | { name: 'settings' }
 
+/** True on the entry pushed above My plants (a plant page, or a tab opened from one). */
+export const isTopEntry = () => !!(history.state as { top?: boolean } | null)?.top
+
 export default function App() {
   const [route, setRoute] = useState<Route>({ name: 'home' })
-  const [toast, setToast] = useState<{ text: string; cls: string } | null>(null)
+  const toast = useToast()
   const plants = useLiveQuery(() => db.plants.toArray(), [])
   const winter = useWinter()
 
   // Opened from a setup link (or one was opened while the app was already showing)?
   // Save the key, clean the address bar, and say so.
   useEffect(() => {
-    let timer: number | undefined
     const check = () => applySetupLinkFromUrl().then((r) => {
-      if (!r || r === 'declined') return
-      setToast(SETUP_MESSAGES[r])
-      window.clearTimeout(timer)
-      timer = window.setTimeout(() => setToast(null), 6000)
+      if (r && r !== 'declined') showToast(SETUP_MESSAGES[r], 6000)
     })
     check()
     window.addEventListener('hashchange', check)
     return () => window.removeEventListener('hashchange', check)
+  }, [])
+
+  // Ask the browser to keep this app's data (plants, photos, log) even when the phone is low
+  // on space. Browsers may say no; nothing else depends on the answer.
+  useEffect(() => {
+    navigator.storage?.persisted?.().then((done) => { if (!done) navigator.storage.persist?.() }).catch(() => {})
   }, [])
 
   // App icon badge = number of plants due today or overdue (where the browser supports it).
@@ -51,6 +57,8 @@ export default function App() {
   useEffect(() => {
     history.replaceState({ name: 'home' }, '')
     const onPop = (e: PopStateEvent) => {
+      // A setup link opened while the app is showing is not a navigation; stay on this screen.
+      if (location.hash.includes('setup=')) return
       setRoute((e.state as Route | null) ?? { name: 'home' })
       window.scrollTo(0, 0)
     }
@@ -58,11 +66,19 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPop)
   }, [])
 
-  // Drilling into a plant adds a history entry (back returns to the list); switching
-  // top-level tabs replaces it, so back never has to walk through every tab tap.
+  // History holds at most two entries: the list, and a plant page on top of it. So back from
+  // a plant always returns to My plants (even right after adding it from Scan), and back
+  // from a tab leaves the app instead of walking through every tab tap.
   const go = (r: Route) => {
-    if (r.name === 'plant') history.pushState(r, '')
-    else history.replaceState(r, '')
+    const onTop = isTopEntry()
+    if (r.name === 'home' && onTop) {
+      history.back() // drop the top entry instead of stacking a second "home"
+    } else if (r.name === 'plant' && !onTop) {
+      history.replaceState({ name: 'home' }, '')
+      history.pushState({ ...r, top: true }, '')
+    } else {
+      history.replaceState(onTop ? { ...r, top: true } : r, '')
+    }
     setRoute(r)
     window.scrollTo(0, 0)
   }
@@ -70,7 +86,10 @@ export default function App() {
   return (
     <div className="app">
       {toast && (
-        <div className={`toast notice ${toast.cls}`} role="status" onClick={() => setToast(null)}>{toast.text}</div>
+        <div className={`toast notice ${toast.cls ?? 'ok'}`} role="status" onClick={() => !toast.action && showToast(null)}>
+          <span className="grow">{toast.text}</span>
+          {toast.action && <button type="button" className="toast-action" onClick={toast.action.run}>{toast.action.label}</button>}
+        </div>
       )}
       {route.name === 'home' && <Home go={go} />}
       {route.name === 'add' && <AddPlant go={go} />}
