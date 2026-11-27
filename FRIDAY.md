@@ -60,6 +60,12 @@ Write down anything odd (a screenshot is perfect) and send it to me.
 > Hi! I made you a little app for your plants 🌿
 > 1. Open this on your phone: https://fabriziocasanova97.github.io/plant-care-app/
 > 2. Tap Share → "Add to Home Screen" so it's an app icon.
-> 3. Then tap this second link once to switch on photo identification: [setup link from Settings]
 > Take a photo of a leaf to add a plant, and tap "Watered" when you water it. It tells you
 > when each one is due. All the care tips come from NC State University's plant experts.
+
+## Pl@ntNet key (updated Friday)
+
+The key is built into the published app from `.env.local` (never committed). No setup link is
+needed any more. Verified on the live site: Test photo identification → "It works", Spider Plant.
+Pl@ntNet's Authorized domains must include `https://fabriziocasanova97.github.io` (with https).
+To change the key: paste the new one into `.env.local`, then rebuild and redeploy.
