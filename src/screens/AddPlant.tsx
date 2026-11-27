@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { Route } from '../App'
 import { db } from '../db'
-import { identify, shrinkImage, getPlantnetKey, type Candidate } from '../plantnet'
+import { identifyWithFallback, shrinkImage, getPlantnetKey, type Candidate } from '../plantnet'
 import { findByScientificName, searchPlants, displayName, type NcsuPlant } from '../data/ncsu'
 import { CareInfo } from '../components/CareInfo'
 import { PlantThumb } from '../components/PlantThumb'
@@ -78,7 +78,7 @@ export default function AddPlant({ go }: { go: (r: Route) => void }) {
     }
     setStep('identifying')
     try {
-      const r = await identify(small, apiKey)
+      const r = await identifyWithFallback(small, apiKey)
       setCandidates(r.candidates)
       setRemaining(r.remaining)
       if (r.candidates.length === 0) setError('Pl@ntNet returned no match. You can pick the plant by name below.')

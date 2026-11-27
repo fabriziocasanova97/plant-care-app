@@ -30,20 +30,34 @@ export default function Settings(_: { go: (r: Route) => void }) {
 
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null)
+  /** With a built-in key the field is hidden until she asks for it ("Use a different key"). */
+  const [showKeyField, setShowKeyField] = useState(false)
+
+  /** Drop the key saved on this phone and go back to the one built into the app. */
+  async function switchToBuiltInKey() {
+    await setSetting('plantnetKey', '')
+    setKey('')
+    setKeyEdited(false)
+    setShowKeyField(false)
+    setTestResult(null)
+  }
 
   /** Send NC State's test photo to Pl@ntNet with the saved key and say plainly whether it worked. */
   async function testKey() {
     if (keyEdited) await save()
-    const k = keyEdited ? key.trim() : (savedKey || BUILT_IN_KEY)
+    // An empty field means "no key of my own": fall back to the one built into the app.
+    const k = (keyEdited ? key.trim() : savedKey) || BUILT_IN_KEY
     if (!k) { setTestResult({ ok: false, text: 'There is no key yet. Paste one above first.' }); return }
     setTesting(true)
     setTestResult(null)
     try {
-      const { top, remaining } = await testIdentification(k)
+      const { top, remaining, switched } = await testIdentification(k)
       const name = top.commonNames[0] ? `${top.commonNames[0]} (${top.scientificName})` : top.scientificName
+      if (switched) setShowKeyField(false)
       setTestResult({
         ok: true,
-        text: `It works. Pl@ntNet identified the test photo as ${name}, ${Math.round(top.score * 100)}% sure.`
+        text: (switched ? 'Pl@ntNet did not accept the key saved on this phone, so it was removed and the app now uses its built-in key. ' : '')
+          + `It works. Pl@ntNet identified the test photo as ${name}, ${Math.round(top.score * 100)}% sure.`
           + (remaining !== null ? ` ${remaining} identifications left today.` : ''),
       })
     } catch (e) {
@@ -136,18 +150,22 @@ export default function Settings(_: { go: (r: Route) => void }) {
 
       <div className="card">
         <h3>Photo identification</h3>
-        {BUILT_IN_KEY && !savedKey ? (
-          <p className="notice ok">Photo identification is built into the app. Nothing to set up.</p>
+        {savedKey === undefined ? null /* still loading: show neither, so nothing flashes */ : BUILT_IN_KEY && !savedKey && !showKeyField ? (
+          <>
+            <p className="notice ok">Photo identification is built into the app. Nothing to set up.</p>
+            <button type="button" className="btn small link" onClick={() => setShowKeyField(true)}>Use a different key</button>
+          </>
         ) : (
           <>
             <label className="field">
               <span>Pl@ntNet API key</span>
               <input type="password" value={key} onChange={(e) => onKeyInput(e.target.value)} placeholder="Paste the key or a setup link" autoCapitalize="off" autoCorrect="off" />
             </label>
-            <p className="muted">Free at <a href="https://my.plantnet.org" target="_blank" rel="noreferrer">my.plantnet.org</a> (500 identifications a day). The key stays on this phone.</p>
+            <p className="muted">Free at <a href="https://my.plantnet.org" target="_blank" rel="noreferrer">my.plantnet.org</a> (500 identifications a day). The key stays on this phone.{keyEdited && ' Tap Save settings to keep it.'}</p>
+            {BUILT_IN_KEY && <button type="button" className="btn small link" onClick={switchToBuiltInKey}>Use the built-in key instead</button>}
           </>
         )}
-        {(savedKey || key.trim() || BUILT_IN_KEY) && (
+        {savedKey !== undefined && (savedKey || key.trim() || BUILT_IN_KEY) && (
           <>
             <button type="button" className="btn block" onClick={testKey} disabled={testing}>
               {testing ? 'Testing…' : 'Test photo identification'}

@@ -381,3 +381,6 @@ textarea:focus { border-color: var(--water); outline: none; box-shadow: 0 0 0 3p
 .log li { align-items: center; gap: 8px; }
 .icon-btn.small { width: 36px; height: 36px; color: var(--muted); }
 .icon-btn.small svg { width: 16px; height: 16px; }
+
+/* Quiet text-style button (e.g. "Use a different key") */
+.btn.link { border-color: transparent; background: transparent; color: var(--green); padding-left: 0; padding-right: 0; text-decoration: underline; text-underline-offset: 3px; margin-bottom: 4px; }
