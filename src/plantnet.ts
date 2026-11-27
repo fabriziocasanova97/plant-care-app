@@ -1,4 +1,13 @@
 // Pl@ntNet identification API — https://my.plantnet.org/doc/api/identify
+import { getSetting } from './db'
+
+/** Key built into the app at build time from .env.local (never committed). Empty if not set. */
+export const BUILT_IN_KEY: string = (import.meta.env.VITE_PLANTNET_KEY ?? '').trim()
+
+/** The key to use: one saved on this phone (Settings or a setup link) wins, else the built-in one. */
+export async function getPlantnetKey(): Promise<string | undefined> {
+  return (await getSetting('plantnetKey')) || BUILT_IN_KEY || undefined
+}
 export interface Candidate {
   score: number
   scientificName: string

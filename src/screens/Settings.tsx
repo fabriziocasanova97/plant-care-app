@@ -8,7 +8,7 @@ import { loadSamplePlants } from '../samples'
 import { formatHour } from '../format'
 import { keyFromLink, shareSetupLink } from '../setup'
 import { showToast } from '../toast'
-import { testIdentification } from '../plantnet'
+import { testIdentification, BUILT_IN_KEY } from '../plantnet'
 
 const WINTER_OPTIONS = [25, 50, 100]
 
@@ -34,7 +34,7 @@ export default function Settings(_: { go: (r: Route) => void }) {
   /** Send NC State's test photo to Pl@ntNet with the saved key and say plainly whether it worked. */
   async function testKey() {
     if (keyEdited) await save()
-    const k = keyEdited ? key.trim() : savedKey
+    const k = keyEdited ? key.trim() : (savedKey || BUILT_IN_KEY)
     if (!k) { setTestResult({ ok: false, text: 'There is no key yet. Paste one above first.' }); return }
     setTesting(true)
     setTestResult(null)
@@ -136,12 +136,18 @@ export default function Settings(_: { go: (r: Route) => void }) {
 
       <div className="card">
         <h3>Photo identification</h3>
-        <label className="field">
-          <span>Pl@ntNet API key</span>
-          <input type="password" value={key} onChange={(e) => onKeyInput(e.target.value)} placeholder="Paste the key or a setup link" autoCapitalize="off" autoCorrect="off" />
-        </label>
-        <p className="muted">Free at <a href="https://my.plantnet.org" target="_blank" rel="noreferrer">my.plantnet.org</a> (500 identifications a day). The key stays on this phone.</p>
-        {(savedKey || key.trim()) && (
+        {BUILT_IN_KEY && !savedKey ? (
+          <p className="notice ok">Photo identification is built into the app. Nothing to set up.</p>
+        ) : (
+          <>
+            <label className="field">
+              <span>Pl@ntNet API key</span>
+              <input type="password" value={key} onChange={(e) => onKeyInput(e.target.value)} placeholder="Paste the key or a setup link" autoCapitalize="off" autoCorrect="off" />
+            </label>
+            <p className="muted">Free at <a href="https://my.plantnet.org" target="_blank" rel="noreferrer">my.plantnet.org</a> (500 identifications a day). The key stays on this phone.</p>
+          </>
+        )}
+        {(savedKey || key.trim() || BUILT_IN_KEY) && (
           <>
             <button type="button" className="btn block" onClick={testKey} disabled={testing}>
               {testing ? 'Testing…' : 'Test photo identification'}

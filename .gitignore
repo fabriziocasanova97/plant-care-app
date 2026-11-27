@@ -3,3 +3,5 @@ dist
 .DS_Store
 *.log
 tsconfig.tsbuildinfo
+.env.local
+*.local

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { Route } from '../App'
-import { db, getSetting } from '../db'
-import { identify, shrinkImage, type Candidate } from '../plantnet'
+import { db } from '../db'
+import { identify, shrinkImage, getPlantnetKey, type Candidate } from '../plantnet'
 import { findByScientificName, searchPlants, displayName, type NcsuPlant } from '../data/ncsu'
 import { CareInfo } from '../components/CareInfo'
 import { PlantThumb } from '../components/PlantThumb'
@@ -55,7 +55,7 @@ export default function AddPlant({ go }: { go: (r: Route) => void }) {
   const fileInput = useRef<HTMLInputElement>(null)
   const libraryInput = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { getSetting('plantnetKey').then(setApiKey) }, [])
+  useEffect(() => { getPlantnetKey().then(setApiKey) }, [])
 
   async function onFile(file: File | undefined) {
     if (!file) return
@@ -69,7 +69,7 @@ export default function AddPlant({ go }: { go: (r: Route) => void }) {
     }
     setPhoto(small)
     // Read the key now, not only on mount: a setup link may have saved it while this screen was open.
-    const apiKey = (await getSetting('plantnetKey')) || undefined
+    const apiKey = await getPlantnetKey()
     setApiKey(apiKey)
     if (!apiKey) {
       setError('No Pl@ntNet API key yet. Add it in Settings, or pick the plant by name below.')
