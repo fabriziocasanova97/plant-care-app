@@ -8,6 +8,7 @@ import { loadSamplePlants } from '../samples'
 import { formatHour } from '../format'
 import { keyFromLink, shareSetupLink } from '../setup'
 import { showToast } from '../toast'
+import { testIdentification } from '../plantnet'
 
 const WINTER_OPTIONS = [25, 50, 100]
 
@@ -24,7 +25,33 @@ export default function Settings(_: { go: (r: Route) => void }) {
   const savedKey = useLiveQuery(() => getSetting('plantnetKey').then((k) => k ?? ''), [])
 
   // Keep the field in step with the saved key (it can arrive later, e.g. from a setup link).
-  useEffect(() => { if (!keyEdited && savedKey !== undefined) setKey(savedKey) }, [savedKey, keyEdited])
+  // Runs only when the saved key changes, so finishing an edit doesn't flash the old value.
+  useEffect(() => { if (!keyEdited && savedKey !== undefined) setKey(savedKey) }, [savedKey])
+
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null)
+
+  /** Send NC State's test photo to Pl@ntNet with the saved key and say plainly whether it worked. */
+  async function testKey() {
+    if (keyEdited) await save()
+    const k = keyEdited ? key.trim() : savedKey
+    if (!k) { setTestResult({ ok: false, text: 'There is no key yet. Paste one above first.' }); return }
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const { top, remaining } = await testIdentification(k)
+      const name = top.commonNames[0] ? `${top.commonNames[0]} (${top.scientificName})` : top.scientificName
+      setTestResult({
+        ok: true,
+        text: `It works. Pl@ntNet identified the test photo as ${name}, ${Math.round(top.score * 100)}% sure.`
+          + (remaining !== null ? ` ${remaining} identifications left today.` : ''),
+      })
+    } catch (e) {
+      setTestResult({ ok: false, text: (e as Error).message })
+    } finally {
+      setTesting(false)
+    }
+  }
 
   /** The key field also accepts a whole setup link (the fallback if the link didn't carry over): saved right away. */
   async function onKeyInput(text: string) {
@@ -114,9 +141,18 @@ export default function Settings(_: { go: (r: Route) => void }) {
           <input type="password" value={key} onChange={(e) => onKeyInput(e.target.value)} placeholder="Paste the key or a setup link" autoCapitalize="off" autoCorrect="off" />
         </label>
         <p className="muted">Free at <a href="https://my.plantnet.org" target="_blank" rel="noreferrer">my.plantnet.org</a> (500 identifications a day). The key stays on this phone.</p>
+        {(savedKey || key.trim()) && (
+          <>
+            <button type="button" className="btn block" onClick={testKey} disabled={testing}>
+              {testing ? 'Testing…' : 'Test photo identification'}
+            </button>
+            <p className="muted">Sends a sample photo of a spider plant to Pl@ntNet, so you can check the key without a plant nearby. Uses 1 of today’s identifications.</p>
+            {testResult && <p className={`notice ${testResult.ok ? 'ok' : 'err'} mt`} role="status">{testResult.text}</p>}
+          </>
+        )}
         {savedKey && (
           <>
-            <button type="button" className="btn block" onClick={share}>Share setup link</button>
+            <button type="button" className="btn block mt" onClick={share}>Share setup link</button>
             <p className="muted">Sends a link that sets up photo identification on another phone in one tap. Share it only with people you trust; it uses your daily identifications.</p>
             {shareNote && <p className="notice ok mt">{shareNote}</p>}
           </>
@@ -137,6 +173,7 @@ export default function Settings(_: { go: (r: Route) => void }) {
         <h3>Where the information comes from</h3>
         <p>Plant care notes are copied word for word from the <a href={dataset.sourceUrl} target="_blank" rel="noreferrer">{dataset.source}</a> ({dataset.plants.length} houseplant profiles, copied {new Date(dataset.fetchedAt).toLocaleDateString()}). Every plant page links to its source.</p>
         <p>Photo identification is by <a href="https://plantnet.org" target="_blank" rel="noreferrer">Pl@ntNet</a>.</p>
+        <p className="muted">Test photo: “Spider Plant, houseplant view” by Joanne Kollar (Pitt County), <a href="https://plants.ces.ncsu.edu/plants/chlorophytum-comosum/" target="_blank" rel="noreferrer">NC State Extension</a>, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>.</p>
         <p>Watering intervals and winter mode are yours to set; neither source prescribes a schedule.</p>
       </div>
 

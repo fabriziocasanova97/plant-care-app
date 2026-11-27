@@ -1,4 +1,4 @@
-// One app-wide message strip at the top of the screen, optionally with an action ("Undo").
+// One app-wide message strip just above the tab bar, optionally with an action ("Undo").
 import { useEffect, useState } from 'react'
 import { markWatered, undoWatering } from './db'
 

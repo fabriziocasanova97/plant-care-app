@@ -68,6 +68,9 @@ export default function AddPlant({ go }: { go: (r: Route) => void }) {
       return
     }
     setPhoto(small)
+    // Read the key now, not only on mount: a setup link may have saved it while this screen was open.
+    const apiKey = (await getSetting('plantnetKey')) || undefined
+    setApiKey(apiKey)
     if (!apiKey) {
       setError('No Pl@ntNet API key yet. Add it in Settings, or pick the plant by name below.')
       setStep('choose')
